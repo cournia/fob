@@ -14,4 +14,4 @@ fly2_LDADD = \
 	-lGL -lGLU -lglut
 fly2_SOURCES = \
 	fly2.cpp \
-	camera.cpp
+	camera.cpp camera.h
