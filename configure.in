@@ -31,7 +31,7 @@ FOB_VERSION=$FOB_MAJOR_VERSION.$FOB_MINOR_VERSION.$FOB_MICRO_VERSION
 #  ? :+1 : ?   == just some internal changes, nothing breaks but might work 
 #                 better
 # CURRENT : REVISION : AGE
-LIBFOB_SO_VERSION=1:0:2
+LIBFOB_SO_VERSION=2:0:2
 AC_SUBST(LIBFOB_SO_VERSION, $LIBFOB_SO_VERSION)
 
 dnl AC_SUBST(FOB_RELEASE, $FOB_RELEASE)
