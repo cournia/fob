@@ -325,8 +325,10 @@ public:
 		);
 	}
 
+	//! Returns the Euler angle rotation in radians.
 	math::vector3 get_radians( void );
 
+	//! Returns the Euler angle rotation in degrees.
 	math::vector3 get_degrees( void );
 	
 	//! Sets the matrix from a 3x3 rotation matrix.

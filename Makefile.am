@@ -4,5 +4,5 @@ DIST_SUBDIRS = $(SUBDIRS) test
 
 EXTRA_DIST = README fob.doxygen
 
-doc:
+docs:
 	doxygen fob.doxygen

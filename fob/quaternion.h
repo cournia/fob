@@ -194,7 +194,7 @@ public:
 
 	//! Normalizes the quaternion.
 	/*!
-	 * \warn If the quaternion has zero magnitude, a divide by zero may be possible.
+	 * \warning If the quaternion has zero magnitude, a divide by zero may be possible.
 	 */
 	inline void
 	normalize( void ) {
@@ -306,6 +306,8 @@ public:
 	/*!
 	 * Interprets the between the two rotations that \a qa and \a qb describe.
 	 * \param percent A \a real_t between [0-1] descibing how much to interpret between \a qa and \a qb.
+	 * \param qa Initial orientation.
+	 * \param qb Ending orientation.
 	 */
 	static math::quaternion
 	slerp( real_t percent, const math::quaternion& qa, 

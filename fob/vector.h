@@ -301,7 +301,7 @@ public:
 	 * Divides the corresponding components of \a this by \a rhs,
 	 * returning the result.
 	 * \sa math::divide(math::vector3&,const math::vector3&,const math::vector3&)
-	 * \warn No divide by zero checks.
+	 * \warning No divide by zero checks.
 	 */
 	inline math::vector3 operator/ ( const math::vector3& rhs ) const {
 		return math::vector3( 
@@ -344,7 +344,7 @@ public:
 	 * Divides each component of the vector by
 	 * \a rhs, returning the result.
 	 * \param rhs A scalar.
-	 * \warn No divide by zero checks.
+	 * \warning No divide by zero checks.
 	 */
 	inline math::vector3 operator/ ( real_t rhs ) const {
 		return math::vector3( 
@@ -389,7 +389,7 @@ public:
 	/*!
 	 * Divides the corresponding components of the vector by \a rhs,
 	 * The result is stored in \a this vector.
-	 * \warn No divide by zero checks.
+	 * \warning No divide by zero checks.
 	 */
 	inline void operator/= ( const math::vector3 &rhs ) {
 		m_data[ 0 ] /= rhs.m_data[ 0 ];
@@ -434,7 +434,7 @@ public:
 	/*!
 	 * Divides \a rhs from each component in the vector.  
 	 * The result is stored in \a this vector.
-	 * \warn No divide by zero checks.
+	 * \warning No divide by zero checks.
 	 */
 	inline void operator/= ( real_t rhs ) {
 		m_data[ 0 ] /= rhs;
@@ -546,6 +546,8 @@ public:
 	/*!
 	 * Interprets the between the two vectors that \a a and \a b describe.
 	 * \param percent A \a real_t between [0-1] descibing how much to interpret between \a qa and \a qb.
+    * \param a Initial vector.
+    * \param b Ending vector.
 	 */
 	static math::vector3 lerp( real_t percent, const math::vector3& a, 
 		const math::vector3& b );
