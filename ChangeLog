@@ -1,3 +1,6 @@
+0000-00-00 libfob 1.0.3
+ - Added fob::BUTTON_NONE.
+
 2003-12-16 libfob 1.0.2
  - Time to sleep between sending commands over the RS232 cable to 
    the flock hardware can now be specified in fob::fob and

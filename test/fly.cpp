@@ -48,7 +48,7 @@ catch_ctrl_c( int ) {
 std::string
 get_button_str( unsigned char btn )
 {
-	if( 0 == btn ) {
+	if( fob::BUTTON_NONE == btn ) {
 		return "NON";
 	} else if( fob::BUTTON_LEFT == btn ) {
 		return "LFT";

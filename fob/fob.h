@@ -119,11 +119,12 @@ public:
 	static const mode ORIENTATION; //!< Request orientation information from bird.
 	static const mode BUTTONS; //!< Request button information from bird.
 
+	static const unsigned char BUTTON_NONE; //!< No button pressed.
 	static const unsigned char BUTTON_LEFT; //!< Left button mask.
 	static const unsigned char BUTTON_MIDDLE; //!< Middle button mask.
 	static const unsigned char BUTTON_RIGHT; //!< Right button mask.
 	
-	//! A Bird in a Flock of Birds
+	//! A bird in a Flock of Birds
 	class bird {
 	 private:
 		fob& m_flock; //!< Flock this bird belongs too.
@@ -341,14 +342,17 @@ public:
 		//! Applies the given rotation to the each orientation update.
 		void set_rotation( const math::quaternion& rot );
 
-		//! Returns the birds bitwise or'ed button state.
+		//! Returns the currently pressed button.
 		/*!
-		 * To determine what buttons are presses, bitwise or
-		 * with the following variables:
+		 * The flock hardware is not capable of determing if multiple 
+       * buttons are pressed.  If multiple buttons are pressed, any of
+       * the pressed buttons may be returned.  You can check to see
+       * if a button was pressed as follows:
 		 * \code
-		 * if( buttons | fob::BUTTON_LEFT ) //left pressed
-		 * if( buttons | fob::BUTTON_MIDDLE ) //middle pressed
-		 * if( buttons | fob::BUTTON_RIGHT ) //right pressed
+		 * if( buttons == fob::BUTTON_LEFT )        //left pressed
+		 * else if( buttons == fob::BUTTON_MIDDLE ) //middle pressed
+		 * else if( buttons == fob::BUTTON_RIGHT )  //right pressed
+       * else                                     //nothing pressed
 		 * \endcode
 		 */
 		inline unsigned char get_buttons( void ) const {
@@ -402,7 +406,7 @@ public:
 	bool m_group; //!< \c true in group mode.
 	pthread_mutex_t m_mutex; //!< Private data access mutex.
 	unsigned char m_save; //!< Saved byte from input stream.
-	hemisphere m_hemisphere;
+	hemisphere m_hemisphere; //!< Hemisphere in which all birds are operating.
 	unsigned long m_sleep; //!< Time to sleep between fob commands.
 	error_level m_min_error_level; //!< Don't report errors below this error level.
 	

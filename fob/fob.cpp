@@ -42,6 +42,7 @@ const fob::mode fob::POSITION = 0x01;
 const fob::mode fob::ORIENTATION = 0x02;
 const fob::mode fob::BUTTONS = 0x04;
 
+const unsigned char fob::BUTTON_NONE = 0x0;
 const unsigned char fob::BUTTON_LEFT = 0x10;
 const unsigned char fob::BUTTON_MIDDLE = 0x30;
 const unsigned char fob::BUTTON_RIGHT = 0x70;
