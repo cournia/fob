@@ -133,6 +133,7 @@ ACX_PTHREAD( have_pthread=yes, [
 
 AC_OUTPUT([
 	Makefile
+	fob.doxygen
 	fob/Makefile
 	test/Makefile
 ])

@@ -40,7 +40,7 @@ extern "C" {
  * \code
  * //open the flock of birds that is on the 2nd serial port and
  * //with sensors in front of the main transmitter
- * fob flock( "/dev/ttyS1", fob::FORWARD );
+ * fob flock( "/dev/ttyS1", fob::FORWARD, fob::FAST );
  *
  * //make sure that everything opened ok
  * if( !flock ) {
