@@ -15,12 +15,12 @@ make
 This will generate two test programs: "fly" and "fly2".  "fly" simply
 outputs received data from the flock to stderr.  "fly2" is an OpenGL
 based program which shows you the bird's location/orientation.  Of the
-two programs, you should definately give "fly2" to a try.
+two programs, you should definitely give "fly2" to a try.
 
 Part of the fun of getting your flock to work with the library is
 figuring out how long the library should wait between sending 
 commands to the flock hardware.  By default the library waits 500ms
-between commands.  This is very conservitive and a bit slow.  A good
+between commands.  This is very conservative and a bit slow.  A good
 way to find the best wait time for your particular setup is to use
 the test program "fly2":
 
@@ -28,7 +28,7 @@ the test program "fly2":
 
 The above command tells the library to wait 250ms between sending 
 commands to the flock hardware.  To find the optimal wait time, keep 
-decreasing the wait time until the the library is unable to iniatlize
+decreasing the wait time until the the library is unable to initialize
 the birds.  Once you've found a bad value, simply use the previous good
 value.
 
