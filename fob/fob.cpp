@@ -807,6 +807,7 @@ fob::reset( void )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//returns true on error
 bool
 fob::check_error( void )
 {
@@ -818,9 +819,12 @@ fob::check_error( void )
 	}
 	std::cerr << "examine done!" << std::endl;
 
+	//we should get back a single byte which contains the error code
 	int code = (int)(buffer[ 0 ]);
 	DEBUG( "fob::check_error: code: " << code );
 	
+	//make sure the error code returned is in the valid error code range
+	//i.e. between [0,35]
 	if( (code > 35) || (code < 0) ) {
 		set_error( "fob::check_error: fob is returning corrupt data, "
 		 "please reset the flock" );
@@ -828,6 +832,8 @@ fob::check_error( void )
 	}
 	
 	if( code ) {
+		//code is non-zero, this means there is an error
+		//TODO convert the error code to a string explaining the error
 		set_error( "fob::check_error: code: %d", code );
 		return true;
 	}
