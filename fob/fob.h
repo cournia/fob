@@ -356,6 +356,7 @@ public:
 	bool m_group; //!< \c true in group mode.
 	pthread_mutex_t m_mutex; //!< Private data access mutex.
 	unsigned char m_save; //!< Saved byte from input stream.
+	hemisphere m_hemisphere;
 	
 	//! Clears internal error state.
 	inline void clear_error( void ) {
@@ -554,6 +555,9 @@ public:
 	 * It is used mainly internally by the flock's internal thread.
 	 */
 	bool update( void );
+
+	//! Print out status of each bird.
+	bool print_bird_status( void );
 
 	//!Return \c false if flock is in an error state.
 	inline operator bool ( void ) const {
