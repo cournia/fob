@@ -1,0 +1,31 @@
+2003-01-31 uber 0.1.1
+	- CVS tagged as 0.1.1.
+	- src/pbuffer.h: Pixel buffers now have an associated texture 
+	                 handle. (cournia)
+	- src/pbuffer.h: pbuffer::shutdown is now called in pbuffer::~pbuffer
+	                 if needed.
+	
+2003-01-30 uber 0.1.0
+	- CVS tagged as 0.1.0.
+
+2003-01-30 uber 0.0.1
+	- demos/pbuffers Pixel buffer demo added. (van pernis)
+	- src/pbuffer.h: Pixel buffer object created. (van pernis)
+	- src/video_X: X backend created. (van pernis)
+	- docs/pbuffers: Pixel buffer slides added. (van pernis)
+
+2003-01-29 uber 0.0.1
+	- demos/multitexture: Multitexturing demos added. (rasche)
+
+2003-01-17 uber 0.0.1
+	- CVS tagged as version 0.0.1.
+
+2003-01-15 uber 0.0.0
+	- docs/overview: Overview chapter added. (cournia)
+	- demos/overview: Example code from overview chapter added. (cournia)
+
+2003-01-14 uber 0.0.0
+	- demos/fontviewer: Font viewer demo added. (cournia)
+
+2003-01-13 uber 0.0.0
+	- demos/imgviewer: Image viewer demo added. (cournia)

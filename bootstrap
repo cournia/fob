@@ -1,0 +1,5 @@
+#! /bin/sh
+rm -f config.cache
+rm -f acconfig.h
+mkdir -p autotools
+aclocal -I autotools && autoheader && automake --add-missing && autoconf

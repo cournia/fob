@@ -1,0 +1,4 @@
+In order to support GLX extensions, make sure that you're using the latest
+"glx.h" file distributed by your hardware/software vendor.  A current version
+of "glx.h" can be found at http://www.mesa3d.org.
+

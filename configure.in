@@ -1,0 +1,190 @@
+dnl uber
+dnl Nathan Cournia <nathan@cournia.com>
+
+dnl init autoconf
+AC_INIT([uber],[0.0.1])
+AC_PREREQ(2.50)
+
+dnl init automake
+AM_INIT_AUTOMAKE(AC_PACKAGE_NAME,AC_PACKAGE_VERSION)
+
+AM_OPTIONS_WXCONFIG
+
+dnl output config heder
+AM_CONFIG_HEADER(src/config.h)
+
+dnl detect the canonical host and target build environment
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
+
+dnl make sure we have the progs we need
+AC_PROG_CXX
+AC_PROG_CXXCPP
+AC_PROG_RANLIB
+AC_PATH_X
+AC_PATH_XTRA
+
+##########################################################################
+# dependency check
+# set lang for dep check
+AC_LANG_C
+
+dnl check for windows
+case "$target" in
+	*-*-mingw32*)
+		have_win32=yes
+		;;
+	*)
+		have_win32=no
+		;;
+esac
+AM_CONDITIONAL(BUILD_WIN32, test "$have_win32" = yes)
+
+dnl check if we have x
+if ! test x"$no_x" = xyes; then
+	X_LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS -lXxf86vm"
+	AC_SUBST(X_CFLAGS)
+	AC_SUBST(X_LIBS)
+fi
+if test x$have_win32 == xyes; then
+	no_x=yes;
+fi
+AM_CONDITIONAL(BUILD_X, ! test "$no_x" = yes)
+
+dnl check for <ext/hashmap> and stl
+AC_CXX_HAVE_EXT_HASH_MAP
+AC_CXX_HAVE_STL
+
+dnl check for freetyp2
+FT2_VERSION=2.1.0
+AC_CHECK_FT2($FT2_VERSION,have_ft2=yes,[
+	AC_MSG_ERROR([*** Freetype version $FT2_VERSION not found!])
+	]
+)
+if test x$have_ft2 == xyes; then
+	AC_DEFINE(HAVE_FT2,1,
+		[Freetype2 has been compiled into the the library.]
+	)
+fi
+AM_CONDITIONAL(BUILD_FT2, test "$have_sdl" = yes)
+
+dnl SDL (for now make SDL a requirment)
+SDL_VERSION=1.2.4
+AM_PATH_SDL($SDL_VERSION,[
+	have_sdl=yes
+	],[
+	AC_MSG_ERROR([*** SDL version $SDL_VERSION not found!])
+	]
+)
+if test x$have_sdl == xyes; then
+SDL_CFLAGS="$SDL_CFLAGS -DHAVE_SDL"
+dnl AC_DEFINE(HAVE_SDL,1,
+dnl 	[SDL has been compiled into the the library.]
+dnl )
+fi
+AM_CONDITIONAL(BUILD_SDL, test "$have_sdl" = yes)
+
+#save SDL flags for SDL_* checks
+save_CFLAGS="$CFLAGS"
+save_LIBS="$LIBS"
+CFLAGS="$CFLAGS $SDL_CFLAGS"
+LIBS="$LIBS $SDL_LIBS"
+
+dnl check for SDL_image
+AC_CHECK_LIB(SDL_image, IMG_Load_RW, have_sdl_image=yes,[
+	have_sdl_image=no
+	AC_MSG_ERROR([*** SDL_image not found!])
+	]
+)
+if test x$have_sdl_image == xyes; then
+SDL_LIBS="$SDL_LIBS -lSDL_image"
+SDL_CFLAGS="$SDL_CFLAGS -DHAVE_SDL_IMAGE"
+dnl	AC_DEFINE(HAVE_SDL_IMAGE,1,
+dnl		[SDL_image has been compiled into the the library.]
+dnl	)
+fi
+AM_CONDITIONAL(BUILD_SDL_IMAGE, test "$have_sdl" = yes)
+
+#restore vars for rest of dep checks
+CFLAGS="$save_CFLAGS"
+LIBS="$save_LIBS"
+
+
+
+
+dnl GSL
+dnl AC_CHECK_LIB(gslcblas,main)
+AC_CHECK_LIB(gsl,main, have_gsl=yes,[
+	have_gsl=no
+	dnl AC_MSG_ERROR([*** libgsl not found!])
+	]
+)
+if test x$have_gsl == xyes; then
+	AC_DEFINE(HAVE_GSL,1,
+		[GSL has been compiled into the the library.]
+	)
+fi
+AM_CONDITIONAL(BUILD_GSL, test "$have_gsl" = yes)
+
+
+
+dnl OpenGL 
+case "$target" in
+	*-*-mingw32*)
+		GL_LIBS="-lopengl32 -lglu32"
+		;;
+	*)
+		MDL_HAVE_OPENGL
+		;;
+esac
+
+AC_SUBST(GL_CFLAGS)
+AC_SUBST(GL_LIBS)
+
+dnl check for wxWindows
+AM_PATH_WXCONFIG(2.4.0, wxWin=1)
+if test "$wxWin" == 1; then
+	WXGL_LIBS=`wx-config --gl-libs`
+	AC_SUBST(WXGL_LIBS)
+fi
+AM_CONDITIONAL(BUILD_WX, test "$wxWin" == 1)
+	
+
+dnl set language
+AC_LANG_CPLUSPLUS
+
+##########################################################################
+# output makefiles
+WERROR="-Wall -g"
+AC_SUBST(WERROR)
+
+AC_OUTPUT([
+	Makefile 
+	src/Makefile 
+	docs/uber.doxygen
+	demos/Makefile
+	demos/imgviewer/Makefile
+	demos/fontviewer/Makefile
+	demos/multitexture/Makefile
+	demos/overview/Makefile
+	demos/pbuffers/Makefile
+	demos/shadow_maps/Makefile
+	demos/meshviewer/Makefile
+	demos/bump/Makefile
+	demos/wxWindows/Makefile
+	demos/ienasa/Makefile
+	demos/fob/Makefile
+	demos/cve/Makefile
+	demos/cve/test/Makefile
+	demos/eyetest/Makefile
+	demos/ie2/Makefile
+	demos/ie3/Makefile
+	demos/ie3/inspect/Makefile
+	demos/vertexprg/Makefile
+	demos/simplify/Makefile
+	demos/toon/Makefile
+	demos/meshexport/Makefile
+	demos/iscantest/Makefile
+	test/Makefile
+	test/cache/Makefile
+	])
