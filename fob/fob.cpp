@@ -595,6 +595,7 @@ fob::load_flock_status( void )
 		if( buffer[ i ] & 0x80 ) {
 			DEBUG( "fob::load_flock_status: bird: " << i + 1 << " accessible" );
 
+			/*
 			//make sure this bird is something we can handle (not ERT)
 			//mask with 0001 1110
 			if( buffer[ i ] & 0x1E ) {
@@ -602,6 +603,7 @@ fob::load_flock_status( void )
 					"transmitter (ERT) detected" );
 				return false;
 			}
+			*/
 			
 			//add a new bird to the bird list
 			bird *b = new bird( *this );
