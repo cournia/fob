@@ -13,5 +13,6 @@ fly2_LDADD = \
 	$(LDADD) \
 	-lGL -lGLU -lglut
 fly2_SOURCES = \
+	commandoptions.cpp \
 	fly2.cpp \
 	camera.cpp camera.h

@@ -1,3 +1,25 @@
+/*
+-------------------------------------------------------------------------------
+libfob - C++ interface to Ascension Technology Corporation's
+         Flock of Birds position and orientation measurement system.
+Copyright (C) 2002 Nathan Cournia
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-------------------------------------------------------------------------------
+*/
+
 //FILE:         fly2.cpp
 //AUTHOR:       Nathan Cournia <nathan@cournia.com>
 
@@ -7,6 +29,7 @@
 #include <GL/glu.h>
 #include <GL/glut.h>
 #include "camera.h"
+#include "commandoptions.h"
 #include "fob/fob.h"
 
 #define ENABLE_FBB 1
@@ -14,6 +37,45 @@
 const unsigned int MAX_ENTS = 14;
 
 void render_axis( float len );
+
+///////////////////////////////////////////////////////////////////////////////
+struct cmd_args {
+	std::string serial;
+	unsigned long sleep_ms;
+
+	cmd_args( void ): 
+		serial( "/dev/ttyS0" ), 
+		sleep_ms( 500 )
+	{ }
+
+	bool parse( int argc, const char *argv[ ] );
+};
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+cmd_args::parse( int argc, const char *argv[ ] )
+{
+	//command line parser object
+	commandoptions c;
+
+	//register flags/options
+	c.register_option( sleep_ms, "sleep", 's', "Time to sleep between commands (ms)", "MILLISECONDS" );
+	c.register_argument( serial, "device", "Serial port flock is connected too" );
+
+	try {
+		c.process_command_line( argc, argv );
+	} catch( commandoptions_error& ex ) {
+		std::cerr << "error: " << ex.what( ) << std::endl;
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 struct entity {
@@ -35,8 +97,6 @@ entity::render( void )
 	glPushMatrix( );
 
 	//translate and rotate to bird position
-	//glTranslatef( position.x( ), position.y( ), position.z( ) );
-	//glMultMatrixf( orientation.get_transposed_rotation_matrix( ) );
 	matrix.transpose( );
 	glMultMatrixf( matrix );
 	
@@ -124,12 +184,16 @@ handle_resize( int w, int h )
 	glLoadIdentity( );
 }
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 void
 handle_exit( void )
 {
 	flock.close( );
 }
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 void
@@ -171,12 +235,10 @@ render( void )
 int 
 main( int argc, char *argv[ ] )
 {
-	//check command line
-	if( argc < 2 ) {
-		std::cerr << "usage: fly2 <fob-device>" << std::endl;
+	cmd_args args;
+	if( !args.parse( argc, (const char**)argv ) ) {
 		return 1;
 	}
-	char *serial = argv[ 1 ];
 
 	//setup glut
 	glutInit( &argc, argv );
@@ -198,7 +260,7 @@ main( int argc, char *argv[ ] )
 	fob::port_speed speed = fob::FAST;
 	
 	//talk to flock
-	flock.open( serial, hemisphere, speed );
+	flock.open( args.serial, hemisphere, speed, args.sleep_ms );
 	if( !flock ) {
 		std::cerr << "fatal: " << flock.get_error( ) << std::endl;
 		return 1;

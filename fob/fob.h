@@ -1,3 +1,25 @@
+/*
+-------------------------------------------------------------------------------
+libfob - C++ interface to Ascension Technology Corporation's
+         Flock of Birds position and orientation measurement system.
+Copyright (C) 2002 Nathan Cournia
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-------------------------------------------------------------------------------
+*/
+
 //FILE:         fob.h
 //AUTHORS:      Nathan Cournia <nathan@cournia.com>
 //              Eric Medlin <emedlin@vr.clemson.edu>
@@ -40,7 +62,8 @@ extern "C" {
  * \code
  * //open the flock of birds that is on the 2nd serial port and
  * //with sensors in front of the main transmitter
- * fob flock( "/dev/ttyS1", fob::FORWARD, fob::FAST );
+ * //sleep about 500ms between configuration commands
+ * fob flock( "/dev/ttyS1", fob::FORWARD, fob::FAST, 500 );
  *
  * //make sure that everything opened ok
  * if( !flock ) {
@@ -344,6 +367,19 @@ public:
 		SLOW
 	};
 
+	//! Serverity of hardware error.
+	enum error_level {
+		WARNING1,
+		WARNING2,
+		FATAL
+	};
+
+	//! Describes an internal flock hardware error.
+	struct error_t {
+		const char *msg;   //!< Descriptive message describing the error.
+		error_level level; //!< Severity of the error.
+	};
+
  private:
 	bool m_error; //!< \c true if in error state.
 	std::string m_error_msg; //!< Error message.
@@ -359,6 +395,8 @@ public:
 	pthread_mutex_t m_mutex; //!< Private data access mutex.
 	unsigned char m_save; //!< Saved byte from input stream.
 	hemisphere m_hemisphere;
+	unsigned long m_sleep; //!< Time to sleep between fob commands.
+	error_level m_min_error_level; //!< Don't report errors below this error level.
 	
 	//! Clears internal error state.
 	inline void clear_error( void ) {
@@ -495,6 +533,30 @@ public:
 	//! Selects the bird at the given bird address as the current bird.
 	bool select_bird( int bird_addr );
 
+	//! Updates the bird list with new data from flock.
+	/*!
+	 * This method probably should not be called by the programmer.
+	 * It is used mainly internally by the flock's internal thread.
+	 */
+	bool update( void );
+
+	//! Sleep between flock commands.
+	void cmd_sleep( void ) const {
+		cmd_sleep( m_sleep );
+	}
+
+	//! Sleep between flock commands.
+	/*!
+	 * \param us Time to sleep in microseconds.
+	 */
+	void cmd_sleep( unsigned long us ) const {
+		//if sleep time is 0, don't call sleep (since it may
+		//give up the processor)
+		if( us > 1 ) {
+			usleep( us );
+		}
+	}
+
 	//see fob.cpp for definitions
 	static const unsigned char STREAM;
 	static const unsigned char POINT;
@@ -527,18 +589,41 @@ public:
 	
 public:
 	//! Constructor
+	/*!
+	 * Creates an \a fob object.  It does not open the flock.  To
+	 * open the flock, call fob::open.
+	 */
 	fob( void );
 
 	//! Constructor with options.
+	/*!
+	 * Creates an \a fob object.  Opens the flock.
+	 * \param device_name Serial port the flock is connected too.
+	 * \param hemi Hemisphere in which all birds of the flock will operate.
+	 * \param speed Speed at which the host system will communicate with the flock hardware.
+	 *              Use fob::SLOW for older flock hardware.
+	 * \param sleep_ms Amount of time to sleep between sending commands to the flock hardware (in ms).
+	 */
 	fob( const std::string& device_name, fob::hemisphere hemi,
-	  port_speed speed = FAST );
+	  port_speed speed = FAST, unsigned long sleep_ms = 500 );
 
 	//! Destructor
+	/*!
+	 * Closes the flock of birds and reclaims any memory used by
+	 * the \a fob object.
+	 */
 	~fob( void );
 
 	//! Opens the flock of birds.
+	/* \param device_name Serial port the flock is connected too.
+	 * \param hemi Hemisphere in which all birds of the flock will operate.
+	 * \param speed Speed at which the host system will communicate with the flock hardware.
+	 *              Use fob::SLOW for older flock hardware.
+	 * \param sleep_ms Amount of time to sleep between sending commands to the flock hardware (in ms).
+	 */
 	const fob& open( const std::string& device_name, 
-		fob::hemisphere hemisphere, port_speed speed = FAST );
+		fob::hemisphere hemisphere, port_speed speed = FAST,
+		unsigned long sleep_ms = 500 );
 
 	//! Closes the flock of birds.
 	bool close( void );
@@ -551,13 +636,6 @@ public:
 	//! Sets the birds flying.
 	bool fly( void );
 
-	//! Updates the bird list with new data from flock.
-	/*!
-	 * This method probably should not be called by the programmer.
-	 * It is used mainly internally by the flock's internal thread.
-	 */
-	bool update( void );
-
 	//! Print out status of each bird.
 	bool print_bird_status( void );
 
@@ -567,8 +645,36 @@ public:
 	}
 
 	//! Returns a string describing the current error.
-	const std::string& get_error( void ) const {
+	inline const std::string& get_error( void ) const {
 		return m_error_msg;
+	}
+
+	//! Sets the amount of time to sleep between flock commands (in ms).
+	/*!
+	 * Sending data to the flock to fast results in placing the
+	 * flock into an unstable state.  One can use this method
+	 * to set a small amount of time the library should sleep
+	 * when sending data to the flock.  Note that this time only
+	 * effects the flock startup time.  It does not effect the 
+	 * rate at which flock data is retrieved.
+	 * \param ms Time to sleep in milliseconds.
+	 */
+	inline void set_sleep( unsigned long ms ) {
+		//convert from ms to us
+		m_sleep = ms * 1000;
+	}
+
+	//! Returns the amount of time to sleep (in ms) between flock commands.
+	inline unsigned long get_sleep( void ) const {
+		return m_sleep / 1000;
+	}
+
+	//! Sets the error level at which flock hardware errors will cause the \a fob object enter an error state.
+	/*!
+	 * \param lvl Error levels below this parameter will not be reported.
+	 */
+	inline void set_error_level( error_level lvl ) {
+		m_min_error_level = lvl;
 	}
 };
 
