@@ -1,0 +1,1097 @@
+//FILE:         fob.cpp
+//AUTHOR:       Nathan Cournia <nathan@cournia.com>
+//FIXME:        endian issues?  if so, can be fixed in examine,
+//              change, send_cmd, unpack, etc.
+
+#include <iostream>
+#include <iomanip>
+#include <cassert>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include "fob.h"
+
+#define DEBUG(x) (std::cerr << x << std::endl)
+//#define DEBUG(x)
+
+const fob::mode fob::POSITION = 0x01;
+const fob::mode fob::ORIENTATION = 0x02;
+const fob::mode fob::BUTTONS = 0x04;
+
+const unsigned char fob::BUTTON_LEFT = 0x10;
+const unsigned char fob::BUTTON_MIDDLE = 0x20;
+const unsigned char fob::BUTTON_RIGHT = 0x40;
+
+const unsigned char fob::STREAM = '@';
+
+const unsigned char fob::POINT = 'B';
+const unsigned char fob::SLEEP = 'G';
+
+const unsigned char fob::EXAMINE = 'O';
+const unsigned char fob::CHANGE = 'P';
+
+const unsigned char fob::MODE_POS = 'V';
+const unsigned char fob::MODE_ANG = 'W';
+const unsigned char fob::MODE_POS_ANG = 'Y';
+const unsigned char fob::MODE_POS_MAT = 'Z';
+const unsigned char fob::MODE_POS_QUAT = ']';
+const unsigned char fob::MODE_QUAT = 0x5C;
+const unsigned char fob::FBB_RESET = '/';
+const unsigned char fob::RUN = 'F';
+
+const fob::command fob::HEMISPHERE = { 'L', 2 };
+const fob::command fob::BUTTON_MODE = { 'M', 1 };
+const fob::command fob::REF_FRAME_1 = { 'H', 12 };
+const fob::command fob::REF_FRAME_2 = { 'r', 6 };
+
+const fob::examine_option fob::BIRD_STATUS = { 0, 2 };
+const fob::examine_option fob::ERROR_CODE = { 10, 1 };
+const fob::examine_option fob::MODEL_ID = { 15, 10 };
+const fob::examine_option fob::REF_FRAME_1_EXAMINE = { 17, 1 };
+const fob::examine_option fob::ADDR_MODE = { 19, 1 };
+const fob::examine_option fob::FLOCK_STATUS = { 36, FOB_MAX_BIRDS }; //14 is normal address mode only
+
+const fob::change_option fob::REF_FRAME_1_ENABLE = { 17, 1 };
+const fob::change_option fob::GROUP = { 35, 1 };
+const fob::change_option fob::FBB_AUTO_CONFIG = { 50, 1 };
+
+const float fob::SCALE = 1.0 / 32767.0;
+const float fob::ANGLE_SCALE = 180.0 / 32767.0;
+
+///////////////////////////////////////////////////////////////////////////////
+//from pg 26 of fbb manual
+static void
+unpack( unsigned char *buffer, short *output, int size )
+{
+	for( int i = 0, j = 0; i < size; i += 2 ) {
+		//shift ls
+		buffer[ i ] = buffer[ i ] << 1;
+
+		output[ j++ ] = ((buffer[ i + 1 ] << 8) | buffer[ i ]) << 1;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::bird::set_mode( fob::mode mask )
+{
+	//select this bird
+	if( !m_flock.select_bird( *this ) ) {
+		//select_bird will set error in parent flock
+		return false;
+	}
+	
+	//what info does the user want
+	if( (mask & (fob::POSITION | fob::ORIENTATION)) == 
+	 	(fob::POSITION | fob::ORIENTATION) ) {
+		//want position and orientation
+		if( !m_flock.send_cmd( MODE_POS_ANG ) ) {
+			//parent flock error set
+			return false;
+		}
+	} else if( mask & fob::POSITION ) {
+		//want position
+		if( !m_flock.send_cmd( MODE_POS ) ) {
+			//parent flock error set
+			return false;
+		}
+	} else if( mask & fob::ORIENTATION ) {
+		//want orientation
+		if( !m_flock.send_cmd( MODE_ANG ) ) {
+			//parent flock error set
+			return false;
+		}
+	}
+
+	//do we want button info
+	unsigned char button_mode;
+	if( mask & fob::BUTTONS ) {
+		//want button info
+		button_mode = 0x01;
+	} else {
+		//don't want button info
+		button_mode = 0x00;
+	}
+
+	//send button command
+	if( !m_flock.send_cmd( BUTTON_MODE, &button_mode ) ) {
+		//parent flock error set
+		return false;
+	}
+
+	//set the mode
+	lock_data( );
+	m_mode = mask;
+	unlock_data( );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void 
+fob::bird::set_rotation( const math::quaternion& quat )
+{
+	m_rotation = quat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::bird::unpack_pos_angle( unsigned char *buffer, int size )
+{
+	//position angle format 12 bytes of data
+	if( 12 != size ) {
+		//wrong amount of data, bail
+		DEBUG( "fob::bird::update: pos/ang size mismatch" );
+		return false;
+	}
+
+	//unpack data
+	short unpacked[ 6 ];
+	unpack( buffer, unpacked, 12 );
+
+	//not let the user access this data
+	lock_data( );
+	
+	//scale and copy data
+	//map x, y, z from birds to -y, -z, x
+	//float pos_scale = m_flock.get_scale( ) * SCALE;
+	float pos_scale = 36.0 * SCALE;
+	m_position.set(
+		static_cast<float>( -unpacked[ 1 ] ) * pos_scale,
+		static_cast<float>( -unpacked[ 2 ] ) * pos_scale,
+		static_cast<float>( unpacked[ 0 ] ) * pos_scale
+
+	);
+
+	
+	//note that bird sends z, y, x
+	//map x, y, z from birds to -y, -z, x
+	m_fob_angles.set( 
+		static_cast<float>( -unpacked[ 4 ] ) * ANGLE_SCALE,
+		static_cast<float>( -unpacked[ 3 ] ) * ANGLE_SCALE,
+		static_cast<float>( unpacked[ 5 ] ) * ANGLE_SCALE
+	);
+
+	m_ori_dirty = true;
+
+	//let the user have fun
+	unlock_data( );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::bird::unpack_angle( unsigned char *buffer, int size )
+{
+	//angle format 6 bytes of data
+	if( 6 != size ) {
+		//wrong amount of data, bail
+		DEBUG( "fob::bird::update: angle size mismatch" );
+		return false;
+	}
+
+	//unpack data
+	short unpacked[ 3 ];
+	unpack( buffer, unpacked, 6 );
+
+	//not let the user access this data
+	lock_data( );
+	
+	//note that bird sends z, y, x
+	//map x, y, z from birds to -y, -z, x
+	m_fob_angles.set( 
+		static_cast<float>( -unpacked[ 1 ] ) * ANGLE_SCALE,
+		static_cast<float>( -unpacked[ 0 ] ) * ANGLE_SCALE,
+		static_cast<float>( unpacked[ 2 ] ) * ANGLE_SCALE
+	);
+
+	//mark new orientation input
+	m_ori_dirty = true;
+
+	//let the user have fun
+	unlock_data( );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::bird::unpack_pos( unsigned char *buffer, int size )
+{
+	//position format 6 bytes of data
+	if( 6 != size ) {
+		//wrong amount of data, bail
+		DEBUG( "fob::bird::update: position size mismatch" );
+		return false;
+	}
+
+	//unpack data
+	short unpacked[ 3 ];
+	unpack( buffer, unpacked, 6 );
+
+	//not let the user access this data
+	lock_data( );
+		
+	//scale and copy data
+	//map x, y, z from birds to -y, -z, x
+	//float pos_scale = m_flock.get_scale( ) * SCALE;
+	float pos_scale = 36.0 * SCALE;
+	m_position.set(
+		static_cast<float>( -unpacked[ 1 ] ) * pos_scale,
+		static_cast<float>( -unpacked[ 2 ] ) * pos_scale,
+		static_cast<float>( unpacked[ 0 ] ) * pos_scale
+
+	);
+
+	//let the user have fun
+	unlock_data( );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::bird::update( unsigned char *buffer, int size )
+{
+	//do we have button data
+	int button_size = 0;
+	lock_data( );
+	if( m_mode & fob::BUTTONS ) {
+		m_buttons = buffer[ size - 2 ];
+		button_size = 1;
+	}
+	unlock_data( );
+	
+	//what info does the user want
+	if( (m_mode & (fob::POSITION | fob::ORIENTATION)) == 
+		(fob::POSITION | fob::ORIENTATION) ) {
+		//unpack position orientation
+		unpack_pos_angle( buffer, size - button_size );
+	} else if( m_mode & fob::ORIENTATION ) {
+		//unpack orientation
+		unpack_angle( buffer, size - button_size );
+	} else if( m_mode & fob::POSITION ) {
+		//unpack orientation
+		unpack_pos( buffer, size - button_size );
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//assumes data is locked!
+void 
+fob::bird::update_orientation( void )
+{
+	//apply x and y rotation
+	math::quaternion tmp;
+	m_quaternion.from_angle_axis( math::to_radians( m_fob_angles.x( ) ),
+		math::vector3::X_AXIS );
+	tmp.from_angle_axis( math::to_radians( m_fob_angles.y( ) ),
+		math::vector3::Y_AXIS );
+	m_quaternion =  tmp * m_quaternion;
+	m_quaternion.normalize( );
+	
+	//the rotation needs to be applied to the new reference frame
+	//not the global one
+	math::vector3 axis;
+	tmp.set( math::vector3::Z_AXIS, 0.0 );
+	axis = (m_quaternion * tmp * !m_quaternion).vec( );
+	axis.normalize( );
+	tmp.from_angle_axis( math::to_radians( m_fob_angles.z( ) ),
+		axis );
+	m_quaternion =  tmp * m_quaternion;
+	m_quaternion.normalize( );
+	
+	//rotate by the correction rotation (for bad sensor installations)
+	m_quaternion =  m_quaternion * m_rotation;
+	m_quaternion.normalize( );
+
+	//FIXME m_angles should contain the angles with m_rotation
+	//      applied 
+	m_angles = m_fob_angles;
+
+	//orientation is new
+	m_ori_dirty = false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::set_rts( bool high )
+{
+	int status;
+	if( ioctl( m_device, TIOCMGET, &status ) < 0 ) {
+		set_error( "fob::set_rts: could not read RTS: %s", 
+			strerror( errno ) );
+		return true;
+	}
+
+	if( high ) {
+		if( status & TIOCM_RTS ) {
+			//already high
+			return true;
+		}
+	} else {
+		if( !(status & TIOCM_RTS) ) {
+			//already low
+			return true;
+		}
+	}
+
+	//fall through, must toggle rts
+	status ^= TIOCM_RTS;
+	if( ioctl( m_device, TIOCMSET, &status ) < 0 ) {
+		set_error( "fob::set_rts: could not set RTS: %s", 
+			strerror( errno ) );
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::select_bird( fob::bird& b )
+{
+	DEBUG( "fob::select_bird: " << b.m_address );
+	unsigned char address = b.m_address;
+	address |= 0xF0;
+
+	//send the command
+	if( write( m_device, &address, 1 ) != 1 ) {
+		set_error( "fob::select_bird: could not send select bird" );
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool 
+fob::select_bird( int bird_addr )
+{
+	DEBUG( "fob::select_bird: " << bird_addr );
+	unsigned char address = bird_addr;
+	address |= 0xF0;
+
+	//send the command
+	if( write( m_device, &address, 1 ) != 1 ) {
+		set_error( "fob::select_bird: could not send select bird" );
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void 
+fob::clear_device( void )
+{
+	//flush (discard) both data received but not read 
+	//and data written but not transmitted
+	tcflush( m_device, TCIOFLUSH );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::send_cmd( unsigned char cmd )
+{
+	//send command
+	if( write( m_device, &cmd, 1 ) != 1 ) {
+		set_error( "fob::send_cmd: could not send command" );
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::send_cmd( fob::command cmd, unsigned char *options )
+{
+	//setup command string
+	unsigned char buffer[ 256 ];
+	buffer[ 0 ] = cmd.cmd;
+	memcpy( &(buffer[ 1 ]), options, cmd.option_bytes );
+
+	//send command
+	int size = 1 + cmd.option_bytes;
+	if( write( m_device, buffer, size ) != size ) {
+		set_error( "fob::send_cmd: could not send command" );
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::examine( fob::examine_option param, unsigned char *output )
+{
+	//setup command string
+	unsigned char cmd[ 2 ];
+	cmd[ 0 ] = EXAMINE;
+	cmd[ 1 ] = param.param;
+
+	//send command
+	if( write( m_device, cmd, 2 ) != 2 ) {
+		set_error( "fob::examine: could not send examine command" );
+		return false;
+	}
+
+	//get reply
+	int reply = read( m_device, output, param.reply_bytes );
+	if( reply < 0 ) {
+		//write error
+		set_error( "fob::examine: could not recv examine reply: %s", 
+			strerror( errno ) );
+		return false;
+	} else if( reply < param.reply_bytes ) {
+		//not enough data
+		set_error( "fob::examine: not enough data in examine reply: "
+			"expected %d: recv %d", param.reply_bytes, reply );
+		return false;
+	}
+
+	//success
+	return true;
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::change( fob::change_option param, unsigned char *option )
+{
+	//setup command string
+	unsigned char cmd[ 256 ];
+	cmd[ 0 ] = CHANGE;
+	cmd[ 1 ] = param.param;
+	memcpy( &(cmd[ 2 ]), option, param.option_bytes );
+
+	//send command
+	int size = 2 + param.option_bytes;
+	if( write( m_device, cmd, size ) != size ) {
+		set_error( "fob::examine: could not send examine command" );
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::check_address_mode( void )
+{
+	unsigned char buffer[ 256 ];
+	if( !examine( ADDR_MODE, buffer ) ) {
+		//examine sets error
+		return false;
+	}
+
+	//must be using normal addressing mode
+	DEBUG( "fob::check_address_mode: mode: " << (int)(buffer[ 0 ]) );
+	if( buffer[ 0 ] != 0 ) {
+		set_error( "fob::check_address_mode: "
+			"flock must be set in normal addressing mode" );
+		return false;
+	}
+
+	//address mode ok
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::load_flock_status( void )
+{
+	//get status from flock
+	unsigned char buffer[ 256 ];
+	if( !examine( FLOCK_STATUS, buffer ) ) {
+		//examine sets error
+		return false;
+	}
+
+	//flock status reply format
+	//bit 7: accessible (fly switch on)
+	//bit 6: running (auto-configured and awake)
+	//bit 5: sensor attached
+	//bit 4: extended range xmtr (ERT) (0 if standard range)
+	//bit 3: ERT #3
+	//bit 2: ERT #2
+	//bit 1: ERT #1
+	//bit 0: xmtr attached (white cube (black? if ERT))
+	
+	//see what is attached
+	for( int i = 0; i < FOB_MAX_BIRDS; ++i ) {
+		//is this bird accessible
+		//mask with 1000 000
+		if( buffer[ i ] & 0x80 ) {
+			DEBUG( "fob::load_flock_status: bird: " << i + 1 << " accessible" );
+
+			//make sure this bird is something we can handle (not ERT)
+			//mask with 0001 1110
+			if( buffer[ i ] & 0x1E ) {
+				set_error( "fob::load_flock_status: unsupported extended range "
+					"transmitter (ERT) detected" );
+				return false;
+			}
+			
+			//add a new bird to the bird list
+			bird *b = new bird( *this );
+			b->m_address = i + 1;
+			m_birds.push_back( b );
+
+			//transmitter attached?
+			//mask with 0000 0001
+			b->m_transmitter = (buffer[ i ] & 0x01);
+
+			//sensor attached?
+			//mask with 0010 0000
+			b->m_transmitter = (buffer[ i ] & 0x20);
+		}
+	}
+
+	//get more information about each bird
+	bool master_found = false;
+	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
+		//select the current bird
+		if( !select_bird( *m_birds[ i ] ) ) {
+			return false;
+		}
+
+		//get the status of this bird
+		if( !examine( BIRD_STATUS, buffer ) ) {
+			//examine sets error
+			return false;
+		}
+
+		//is this bird a master
+		//mask 2nd byte with 1000 0000 (bit 15)
+		//see pg.72 of fbb manual for details 
+		if( buffer[ 1 ] & 0x80 ) {
+			DEBUG( "fob::load_flock_status: possible master at address " << m_birds[ i ]->m_address );
+			if( m_birds[ i ]->m_address < m_master ) {
+				//new possible master
+				master_found = true;
+				m_master = m_birds[ i ]->m_address;
+			}
+		}
+	}
+
+	//make sure a master was found
+	if( !master_found ) {
+		set_error( "fob::load_flock_status: master bird could not be found" );
+		return false;
+	}
+	DEBUG( "fob::load_flock_status: master found at address " << m_master );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//sleep times are from fbb programming manual
+bool
+fob::auto_configure( void )
+{
+	if( m_birds.size( ) < 1 ) {
+		set_error( "fob::auto_configure: no birds detected" );
+		return false;
+	}
+	
+	//must sleep 600ms before the autoconfig call
+	DEBUG( "fob::auto_configure: sleeping 600ms before autoconfig" );
+	usleep( 700000 );
+	
+	unsigned char num_birds = (int)(m_birds.size( ));
+	if( !change( FBB_AUTO_CONFIG, &num_birds ) ) {
+		//change sets error
+		return false;
+	}
+	
+	//must sleep 600ms after the autoconfig call
+	DEBUG( "fob::auto_configure: sleeping 600ms after autoconfig" );
+	sleep( 1 );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::set_hemisphere( fob::bird& b, fob::hemisphere hemi )
+{
+	//select the bird
+	if( !select_bird( b ) ) {
+		//select_bird sets error
+		return false;
+	}
+
+	//determine hemisphere cmd chars
+	unsigned char cmd[ 2 ];
+	switch( hemi ) {
+		case FORWARD:
+			cmd[ 0 ] = 0x00;
+			cmd[ 1 ] = 0x00;
+		break;
+		
+		case AFT:
+			cmd[ 0 ] = 0x00;
+			cmd[ 1 ] = 0x01;
+		break;
+		
+		case UP:
+			cmd[ 0 ] = 0x0C;
+			cmd[ 1 ] = 0x01;
+		break;
+		
+		case DOWN:
+			cmd[ 0 ] = 0x0C;
+			cmd[ 1 ] = 0x00;
+		break;
+		
+		case LEFT:
+			cmd[ 0 ] = 0x06;
+			cmd[ 1 ] = 0x01;
+		break;
+
+		case RIGHT:
+			cmd[ 0 ] = 0x06;
+			cmd[ 1 ] = 0x00;
+		break;
+
+		default:
+			set_error( "fob::set_hemisphere: unknown hemisphere" );
+			return false;
+		break;
+	}
+
+	//send hemisphere command
+	if( !send_cmd( HEMISPHERE, cmd ) ) {
+		//send_cmd sets error
+		return false;
+	}
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::reset( void )
+{
+	DEBUG( "fob::reset: initiating reset..." );
+	//set rts high
+	if( !set_rts( true ) ) {
+		return false;
+	}
+
+	//set rts low (fly)
+	if( !set_rts( false ) ) {
+		return false;
+	}
+
+	//sleep 3 seconds to let the rts register
+	//this is probably a bit of an overkill
+	sleep( 3 );
+
+	//send the reset command
+	clear_device( );
+	if( !send_cmd( FBB_RESET ) ) {
+		//send_cmd sets error
+		return false;
+	}
+	DEBUG( "fob::reset: ...done" );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::check_error( void )
+{
+	unsigned char buffer[ 256 ];
+	if( !examine( ERROR_CODE, buffer ) ) {
+		//examine sets error
+		return true;
+	}
+
+	int code = (int)(buffer[ 0 ]);
+	DEBUG( "fob::check_error: code: " << code );
+	if( code ) {
+		set_error( "fob::check_error: code: %d", code );
+		return true;
+	}
+
+	//no error
+	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+fob::fob( void ): m_error( true ), m_error_msg( "uninitialized" ),
+	m_open( false ), m_device( -1 ), m_master( 666 ), m_fly( false ),
+	m_group( false ), m_save( 0x00 )
+{
+	//create streaming thread
+	if( pthread_create( &m_flock_thread, NULL, 
+		get_flock_data, this ) != 0 ) {
+		//could not create thread
+		set_error( "fob::fob: could not create download thread" );
+	}
+
+	//create mutex
+	pthread_mutex_init( &m_mutex, NULL );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+fob::fob( const std::string& device_name, fob::hemisphere hemi,
+	fob::port_speed speed ):
+	m_error( true ), m_error_msg( "uninitialized" ),
+	m_open( false ), m_device( -1 ), m_master( 666 ), m_fly( false ),
+	m_group( false ), m_save( 0x00 )
+{
+	//create streaming thread
+	if( pthread_create( &m_flock_thread, NULL, 
+		get_flock_data, this ) != 0 ) {
+		//could not create thread
+		set_error( "fob::fob: could not create download thread" );
+	}
+
+	//create mutex
+	pthread_mutex_init( &m_mutex, NULL );
+	
+	//just call open, open handles setting the error state
+	open( device_name, hemi, speed );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+fob::~fob( void )
+{
+	//cancel the flock data retrieval thread
+	pthread_cancel( m_flock_thread );
+
+	//destroy mutex 
+	pthread_mutex_destroy( &m_mutex );
+
+	//close the serial port
+	close( );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+const fob& 
+fob::open( const std::string& device_name, 
+	fob::hemisphere hemi, fob::port_speed speed )
+{
+	//is a device already open
+	assert( !m_open );
+	
+	//open serial port
+	DEBUG( "fob::open: dev: '" << device_name << "'" );
+	m_device = ::open( device_name.c_str( ), O_RDWR );
+	if( m_device < 0 ) {
+		set_error( "fob::open: %s", strerror( errno ) );
+		return *this;
+	}
+
+	//save old serial port settings
+	if( tcgetattr( m_device, &m_save_tio ) < 0 ) {
+		set_error( "fob::open: %s", strerror( errno ) );
+		return *this;
+	}
+
+	//init serial port settings
+	struct termios settings;
+	memset( &settings, 0, sizeof( struct termios ) );
+
+	//control mode flags
+	//B115200 - fast flow rate communication
+	//CS8     - 8 bit, no parity, 1 stopbit
+	//CLOCAL  - local connection, no modem contol
+	//CREAD   - enable receiving characters
+	settings.c_cflag = CS8 | CLOCAL | CREAD;
+	if( speed == FAST ) {
+		DEBUG( "fob::open: speed: 115200" );
+		settings.c_cflag |= B115200;
+	} else {
+		DEBUG( "fob::open: speed: 38400" );
+		settings.c_cflag |= B38400;
+	}
+
+	//input mode flags
+	settings.c_iflag = IXOFF; //disable flow control
+
+	//local mode flags 
+	settings.c_lflag = 0; //non canonical input
+
+	//control characters
+	//set a 2 second timeout
+	settings.c_cc[ VMIN ] = 0;
+	settings.c_cc[ VTIME ] = 20;
+
+	//tell the os the serial port settings we want
+	tcflush( m_device, TCIFLUSH );
+	if( tcsetattr( m_device, TCSANOW, &settings ) < 0 ) {
+		set_error( "fob::open: %s", strerror( errno ) );
+		return *this;
+	}
+	
+	//clear serial device
+	clear_device( );
+
+	//reset the flock
+	if( !reset( ) ) {
+		//send_cmd sets error
+		return *this;
+	}
+
+	//flocks that do no have pin 8 of the serial cable hooked
+	//up will not be reset by the above reset call.  to
+	//ensure that the flock is in a somewhat nice state.  
+	//place the flock in point mode.   we must be in group mode
+	//to run the point mode command since we don't know how many
+	//birds are in the flock at this point
+	clear_device( );
+	unsigned char group = 0x01;
+	DEBUG( "fob::open: changing into group mode" );
+	change( GROUP, &group );
+
+	//now send the point mode command
+	clear_device( );
+	DEBUG( "fob::open: changing into point mode" );
+	send_cmd( POINT );
+	
+	//we no longer should be in group mode
+	clear_device( );
+	group = 0x00;
+	DEBUG( "fob::open: changing out of group mode" );
+	change( GROUP, &group );
+	clear_device( );
+
+	//must be in normal addressing mode
+	clear_device( );
+	DEBUG( "fob::open: checking addressing mode" );
+	if( !check_address_mode( ) ) {
+		//old bird versions may not respond to this check
+		std::cerr << "fob::open: warning: addressing mode may be invalid." 
+			<< std::endl;
+	}
+
+	//get bird info
+	clear_device( );
+	if( !load_flock_status( ) ) {
+		//get_flock_status sets error
+		return *this;
+	}
+
+	//auto-configure
+	clear_device( );
+	if( !auto_configure( ) ) {
+		//auto_configure sets error
+		return *this;
+	}
+
+	//set the hemisphere for each bird
+	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
+		if( m_birds[ i ]->m_sensor ) {
+			clear_device( );
+			if( !set_hemisphere( *m_birds[ i ], hemi ) ) {
+				//set_hemisphere sets error
+				return *this;
+			}
+		}
+	}
+
+	//any errors?
+	clear_device( );
+	if( check_error( ) ) {
+		return *this;
+	}
+	
+	//success
+	DEBUG( "fob::open: success" );
+	m_open = true;
+	clear_error( );
+	return *this;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::close( void )
+{
+	DEBUG( "fob::close" );
+	//is the device open?
+	if( !m_open ) return true;
+
+	//stop streaming and put the birds sleep
+	clear_device( );
+	if( m_birds.size( ) > 0 ) {
+		select_bird( *m_birds[ 0 ] );
+	}
+	clear_device( );
+	send_cmd( POINT );
+	clear_device( );
+	send_cmd( SLEEP );
+
+	//put rts in low voltage (standby mode)
+	set_rts( false );
+	
+	//set the serial port settings to their old values
+	if( tcsetattr( m_device, TCSANOW, &m_save_tio ) < 0 ) {
+		set_error( "fob::close: %s", strerror( errno ) );
+		return false;
+	}
+	
+	//close the fob serial device
+	if( ::close( m_device ) < 0 ) {
+		set_error( "fob::close: %s", strerror( errno ) );
+		return false;
+	}
+
+	//success
+	m_open = false;
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::fly( void )
+{
+	DEBUG( "fob::fly" );
+	lock( );
+	if( m_fly ) {
+		//already flying
+		unlock( );
+		return true;
+	}
+	unlock( );
+
+	//place the flock into group mode
+	DEBUG( "fob::fly: sending group command" );
+	unsigned char options = 0x1;
+	if( !change( GROUP, &options ) ) {
+		//change sets error
+		return false;
+	}
+
+	//we are in group mode now
+	m_group = true;
+
+	//place the flock in streaming mode
+	DEBUG( "fob::fly: sending stream command" );
+	if( !send_cmd( STREAM ) ) {
+		//send_cmd sets error
+		return false;
+	}
+
+	//we are now flying!
+	lock( );
+	m_fly = true;
+	unlock( );
+
+	check_error( );
+
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool
+fob::update( void )
+{	
+	//if we are not flying, don't read streamed data
+	lock( );
+	if( !m_fly ) {
+		unlock( );
+		return true;
+	}
+	unlock( );
+
+	unsigned int read_error = 0;
+	unsigned int phases_found = 0;
+	unsigned char buffer[ 256 ];
+	unsigned int i = 0;
+
+	//did the last byte saved contain a phasing bit
+	//mask with 1000 000
+	if( m_save & 0x80 ) {
+		buffer[ i++ ] = m_save;
+		++phases_found;
+		m_save = 0x0;
+	}
+	
+	//read in 1 byte as a type (as suggested by fbb manual)
+	while( (phases_found < 2) && (read_error < 5) ) {
+		if( read( m_device, &buffer[ i ], 1 ) == 1 ) {
+			//successful read, does this byte have the phasing bit
+			//mask with 1000 000
+			if( buffer[ i ] & 0x80 ) {
+				++phases_found;
+			}
+
+			//next spot
+			++i;
+		} else {
+			++read_error;
+		}
+	}
+
+	if( read_error > 4 ) {
+		//to many read errors (probably stalled for > 10 seconds)
+		//5 * 2 second read timeout
+		m_save = 0x0;
+		set_error( "fob::update: flock no longer responding" );
+		return false;
+	}
+
+	//save last byte (which is actually first byte of next record)
+	m_save = buffer[ --i ];
+
+	//get bird address
+	int address = static_cast<int>( buffer[ i - 1 ] ) - 1;
+
+	//make sure address is valid
+	if( (address < 0) || (address >= static_cast<int>( m_birds.size( ))) ) {
+		//corrupt data, do nothing
+		std::cerr << "fob::update: warning: bad bird address: "
+			<< address << " bytes read: " << i << std::endl;
+		return true;
+	}
+	
+	//send buffer to bird (bird makes sure data is sane)
+	//DEBUG( "fob::update: record address: " << address );
+	m_birds[ address ]->update( buffer, i - 1 );
+	
+	//success
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+extern "C" {
+	void*
+	get_flock_data( void *data )
+	{
+		//when pthread_cancel is called, cancel immidiately
+		pthread_setcanceltype( PTHREAD_CANCEL_ASYNCHRONOUS, NULL );
+		
+		//data is really a pointer to a fob
+		fob *flock = (fob*)data;
+
+		//update forever, parent object will call pthread_cancel( )
+		while( 1 ) {
+			flock->update( );
+		}
+	}
+}

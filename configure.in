@@ -1,190 +1,137 @@
-dnl uber
+dnl Flock of Birds Libray
 dnl Nathan Cournia <nathan@cournia.com>
+dnl
+dnl This file modified from libsig++ 1.2.5
+dnl http://libsigc.sf.net
 
-dnl init autoconf
-AC_INIT([uber],[0.0.1])
-AC_PREREQ(2.50)
+AC_INIT([fob],[1.0.0])
 
-dnl init automake
+define(AC_PUSH_LIB,[dnl
+ifdef([__LIB__],,[define([__LIB__],0)])dnl
+ac_save_LIBS[]__LIB__="$LIBS"
+define([__LIB__],builtin(eval,(__LIB__ + 1)))dnl
+LIBS="$1"])
+define(AC_POP_LIB,[dnl
+define([__LIB__],builtin(eval,(__LIB__ - 1)))dnl
+LIBS="$ac_save_LIBS[]__LIB__"])
+
+
+dnl
+dnl Source packaging numbers
+FOB_MAJOR_VERSION=1
+FOB_MINOR_VERSION=0
+FOB_MICRO_VERSION=0
+
+FOB_VERSION=$FOB_MAJOR_VERSION.$FOB_MINOR_VERSION.$FOB_MICRO_VERSION
+
+#
+# +1 : ? : +1  == new interface that does not break old one
+# +1 : ? : 0   == new interface that breaks old one
+#  ? : ? : 0   == no new interfaces, but breaks apps
+#  ? :+1 : ?   == just some internal changes, nothing breaks but might work 
+#                 better
+# CURRENT : REVISION : AGE
+LIBFOB_SO_VERSION=1:0:0
+AC_SUBST(LIBFOB_SO_VERSION, $LIBFOB_SO_VERSION)
+
+dnl AC_SUBST(FOB_RELEASE, $FOB_RELEASE)
+AC_SUBST(FOB_VERSION)
+
+AC_DEFINE_UNQUOTED(FOB_MAJOR_VERSION, $FOB_MAJOR_VERSION,[major])
+AC_DEFINE_UNQUOTED(FOB_MINOR_VERSION, $FOB_MINOR_VERSION,[minor])
+AC_DEFINE_UNQUOTED(FOB_MICRO_VERSION, $FOB_MICRO_VERSION,[micro])
+
+dnl AC_CONFIG_AUX_DIR(scripts)
+
+dnl For automake.
+dnl VERSION=$FOB_VERSION
+dnl PACKAGE=libfob
+
+dnl Initialize automake stuff
+dnl AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME,AC_PACKAGE_VERSION)
 
-AM_OPTIONS_WXCONFIG
+dnl Specify a configuration file
+AM_CONFIG_HEADER(fob/config.h)
 
-dnl output config heder
-AM_CONFIG_HEADER(src/config.h)
 
-dnl detect the canonical host and target build environment
+AC_ARG_ENABLE(verb,
+[  --disable-verbose       disable message during flock intialization],
+enable_verb=$enableval,enable_verb="yes"
+)
+
+AC_PROG_CC
+AC_PROG_CPP
+
+dnl Used for enabling the "-no-undefined" flag while generating DLLs
+dnl Copied from the official gtk+-2 configure.in
 AC_CANONICAL_HOST
-AC_CANONICAL_TARGET
+dnl AC_MSG_CHECKING([for some Win32 platform])
+dnl case "$host" in
+dnl   *-*-mingw*|*-*-cygwin*)
+dnl     platform_win32=yes
+dnl     LIBSTDCPP_LIBS=-lstdc++
+dnl     ;;
+dnl   *)
+dnl     platform_win32=no
+dnl     LIBSTDCPP_LIBS=
+dnl     ;;
+dnl esac
+dnl AC_SUBST(LIBSTDCPP_LIBS)
+dnl AC_MSG_RESULT([$platform_win32])
+dnl AM_CONDITIONAL(PLATFORM_WIN32, test "$platform_win32" = "yes")
+dnl 
+dnl AC_MSG_CHECKING([for native Win32])
+dnl case "$host" in
+dnl   *-*-mingw*)
+dnl     os_win32=yes
+dnl     MATH_LIB=
+dnl     ;;
+dnl   *)
+dnl     os_win32=no
+dnl     ;;
+dnl esac
+dnl AC_MSG_RESULT([$os_win32])
+dnl AM_CONDITIONAL(OS_WIN32, test "$os_win32" = "yes")
 
-dnl make sure we have the progs we need
+dnl AM_DISABLE_STATIC
+
+dnl Instruct build of dll for cygwin and mingw32 (libtool 1.4)
+dnl Exports screw up badly on libtool 1.3, backing off to 1.2f
+dnl Seems to be working again with libtool 1.4 
+dnl AC_LIBTOOL_WIN32_DLL  
+
+dnl libtool does all checks with $CC, not with $CXX
+dnl maybe this should be fixed in libtool, not here
+AM_PROG_LIBTOOL
+
+dnl On FreeBSD 3.0 (and perhaps some other systems) GNU m4 is
+dnl called `gm4' where `m4' is the system's own m4.
+AC_CHECK_PROGS(M4, gm4 m4, m4)
+AC_MSG_CHECKING(if m4 is gnu m4 (required))
+if "$M4" --version 2>&1 < /dev/null | egrep 'GNU' > /dev/null; then
+  AC_MSG_RESULT([yes])
+else
+  config_error=yes
+  AC_MSG_RESULT([no (fail)])
+  AC_MSG_ERROR([you must use GNU m4 to build libfob])
+fi
+
 AC_PROG_CXX
-AC_PROG_CXXCPP
-AC_PROG_RANLIB
-AC_PATH_X
-AC_PATH_XTRA
-
-##########################################################################
-# dependency check
-# set lang for dep check
-AC_LANG_C
-
-dnl check for windows
-case "$target" in
-	*-*-mingw32*)
-		have_win32=yes
-		;;
-	*)
-		have_win32=no
-		;;
-esac
-AM_CONDITIONAL(BUILD_WIN32, test "$have_win32" = yes)
-
-dnl check if we have x
-if ! test x"$no_x" = xyes; then
-	X_LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS -lXxf86vm"
-	AC_SUBST(X_CFLAGS)
-	AC_SUBST(X_LIBS)
-fi
-if test x$have_win32 == xyes; then
-	no_x=yes;
-fi
-AM_CONDITIONAL(BUILD_X, ! test "$no_x" = yes)
-
-dnl check for <ext/hashmap> and stl
-AC_CXX_HAVE_EXT_HASH_MAP
-AC_CXX_HAVE_STL
-
-dnl check for freetyp2
-FT2_VERSION=2.1.0
-AC_CHECK_FT2($FT2_VERSION,have_ft2=yes,[
-	AC_MSG_ERROR([*** Freetype version $FT2_VERSION not found!])
-	]
-)
-if test x$have_ft2 == xyes; then
-	AC_DEFINE(HAVE_FT2,1,
-		[Freetype2 has been compiled into the the library.]
-	)
-fi
-AM_CONDITIONAL(BUILD_FT2, test "$have_sdl" = yes)
-
-dnl SDL (for now make SDL a requirment)
-SDL_VERSION=1.2.4
-AM_PATH_SDL($SDL_VERSION,[
-	have_sdl=yes
-	],[
-	AC_MSG_ERROR([*** SDL version $SDL_VERSION not found!])
-	]
-)
-if test x$have_sdl == xyes; then
-SDL_CFLAGS="$SDL_CFLAGS -DHAVE_SDL"
-dnl AC_DEFINE(HAVE_SDL,1,
-dnl 	[SDL has been compiled into the the library.]
-dnl )
-fi
-AM_CONDITIONAL(BUILD_SDL, test "$have_sdl" = yes)
-
-#save SDL flags for SDL_* checks
-save_CFLAGS="$CFLAGS"
-save_LIBS="$LIBS"
-CFLAGS="$CFLAGS $SDL_CFLAGS"
-LIBS="$LIBS $SDL_LIBS"
-
-dnl check for SDL_image
-AC_CHECK_LIB(SDL_image, IMG_Load_RW, have_sdl_image=yes,[
-	have_sdl_image=no
-	AC_MSG_ERROR([*** SDL_image not found!])
-	]
-)
-if test x$have_sdl_image == xyes; then
-SDL_LIBS="$SDL_LIBS -lSDL_image"
-SDL_CFLAGS="$SDL_CFLAGS -DHAVE_SDL_IMAGE"
-dnl	AC_DEFINE(HAVE_SDL_IMAGE,1,
-dnl		[SDL_image has been compiled into the the library.]
-dnl	)
-fi
-AM_CONDITIONAL(BUILD_SDL_IMAGE, test "$have_sdl" = yes)
-
-#restore vars for rest of dep checks
-CFLAGS="$save_CFLAGS"
-LIBS="$save_LIBS"
-
-
-
-
-dnl GSL
-dnl AC_CHECK_LIB(gslcblas,main)
-AC_CHECK_LIB(gsl,main, have_gsl=yes,[
-	have_gsl=no
-	dnl AC_MSG_ERROR([*** libgsl not found!])
-	]
-)
-if test x$have_gsl == xyes; then
-	AC_DEFINE(HAVE_GSL,1,
-		[GSL has been compiled into the the library.]
-	)
-fi
-AM_CONDITIONAL(BUILD_GSL, test "$have_gsl" = yes)
-
-
-
-dnl OpenGL 
-case "$target" in
-	*-*-mingw32*)
-		GL_LIBS="-lopengl32 -lglu32"
-		;;
-	*)
-		MDL_HAVE_OPENGL
-		;;
-esac
-
-AC_SUBST(GL_CFLAGS)
-AC_SUBST(GL_LIBS)
-
-dnl check for wxWindows
-AM_PATH_WXCONFIG(2.4.0, wxWin=1)
-if test "$wxWin" == 1; then
-	WXGL_LIBS=`wx-config --gl-libs`
-	AC_SUBST(WXGL_LIBS)
-fi
-AM_CONDITIONAL(BUILD_WX, test "$wxWin" == 1)
-	
-
-dnl set language
+dnl AC_PROG_CXX_SUN
 AC_LANG_CPLUSPLUS
 
-##########################################################################
-# output makefiles
-WERROR="-Wall -g"
-AC_SUBST(WERROR)
+AC_CXX_HAVE_STL
+AC_CXX_HAVE_STD
+AC_CXX_BOOL
+AC_CXX_MUTABLE
+dnl AC_CXX_NAMESPACES
+
+ACX_PTHREAD( have_pthread=yes, [
+	AC_MSG_ERROR([ pthread library not found!])
+])
 
 AC_OUTPUT([
-	Makefile 
-	src/Makefile 
-	docs/uber.doxygen
-	demos/Makefile
-	demos/imgviewer/Makefile
-	demos/fontviewer/Makefile
-	demos/multitexture/Makefile
-	demos/overview/Makefile
-	demos/pbuffers/Makefile
-	demos/shadow_maps/Makefile
-	demos/meshviewer/Makefile
-	demos/bump/Makefile
-	demos/wxWindows/Makefile
-	demos/ienasa/Makefile
-	demos/fob/Makefile
-	demos/cve/Makefile
-	demos/cve/test/Makefile
-	demos/eyetest/Makefile
-	demos/ie2/Makefile
-	demos/ie3/Makefile
-	demos/ie3/inspect/Makefile
-	demos/vertexprg/Makefile
-	demos/simplify/Makefile
-	demos/toon/Makefile
-	demos/meshexport/Makefile
-	demos/iscantest/Makefile
-	test/Makefile
-	test/cache/Makefile
-	])
+	Makefile
+	fob/Makefile
+])
