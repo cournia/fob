@@ -463,7 +463,7 @@ fob::set_rts( bool high )
 	if( ioctl( m_device, TIOCMGET, &status ) < 0 ) {
 		set_error( "fob::set_rts: could not read RTS: %s", 
 			strerror( errno ) );
-		return true;
+		return false;
 	}
 
 	if( high ) {
