@@ -8,13 +8,13 @@ noinst_PROGRAMS = \
 	fly2 
 
 fly_SOURCES = \
-	commandoptions.cpp \
+	commandoptions.cpp commandoptions.h \
 	fly.cpp
 
 fly2_LDADD = \
 	$(LDADD) \
 	-L/usr/X11R6/lib -lGL -lGLU -lglut
 fly2_SOURCES = \
-	commandoptions.cpp \
+	commandoptions.cpp commandoptions.h \
 	fly2.cpp \
 	camera.cpp camera.h
