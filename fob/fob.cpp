@@ -416,20 +416,21 @@ fob::read( unsigned char *buffer, int bytes )
 	int i, count;
 	for( i = 0; (i < bytes) && (read_error < 5); ) {
 		//read in 1 byte at a time
-		if( (count = ::read( m_device, &buffer[ i ], 1 )) ) {
-			if( count < 0 ) {
-				//error
-				if( errno != EINTR ) {
-					//error code returned, but not an interrupt
-					++read_error;
-				}
-			} else if( count < 1 ) {
-				//for some reason, couldn't read a byte (shouldn't happen)
+		std::cerr << "read: " << i << " " << bytes << " " << read_error << std::endl;
+		count = ::read( m_device, &buffer[ i ], 1 );
+		if( count < 0 ) {
+			//error
+			if( errno != EINTR ) {
+				//error code returned, but not an interrupt
+				std::cerr << "eintr" << std::endl;
 				++read_error;
-			} else {
-				//byte read
-				++i;
 			}
+		} else if( count < 1 ) {
+			//for some reason, couldn't read a byte (shouldn't happen)
+			++read_error;
+		} else {
+			//byte read
+			++i;
 		}
 	}
 
@@ -480,13 +481,17 @@ fob::examine( fob::examine_option param, unsigned char *output )
 	cmd[ 1 ] = param.param;
 
 	//send command
+	std::cerr << "examine write" << std::endl;
 	if( write( m_device, cmd, 2 ) != 2 ) {
 		set_error( "fob::examine: could not send examine command" );
 		return false;
 	}
+	std::cerr << "examine write done" << std::endl;
 
 	//get reply
+	std::cerr << "examine read" << std::endl;
 	int reply = read( output, param.reply_bytes );
+	std::cerr << "examine read done" << std::endl;
 	if( reply < 0 ) {
 		//write error
 		set_error( "fob::examine: could not recv examine reply: %s", 
@@ -516,10 +521,12 @@ fob::change( fob::change_option param, unsigned char *option )
 
 	//send command
 	int size = 2 + param.option_bytes;
+	std::cerr << "change write!" << std::endl;
 	if( write( m_device, cmd, size ) != size ) {
 		set_error( "fob::examine: could not send examine command" );
 		return false;
 	}
+	std::cerr << "change write done" << std::endl;
 
 	//success
 	return true;
@@ -557,7 +564,15 @@ fob::load_flock_status( void )
 		//examine sets error
 		return false;
 	}
+	sleep( 1 );
 
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return *this;
+	}
+	
 	//flock status reply format
 	//bit 7: accessible (fly switch on)
 	//bit 6: running (auto-configured and awake)
@@ -570,6 +585,11 @@ fob::load_flock_status( void )
 	
 	//see what is attached
 	for( int i = 0; i < FOB_MAX_BIRDS; ++i ) {
+		std::cerr << i << ": ";
+		for( unsigned int j = 0; j < 8; ++j ) {
+			std::cerr << ((buffer[ i ] >> j) & 0x1);
+		}
+		std::cerr << std::endl;
 		//is this bird accessible
 		//mask with 1000 000
 		if( buffer[ i ] & 0x80 ) {
@@ -594,7 +614,7 @@ fob::load_flock_status( void )
 
 			//sensor attached?
 			//mask with 0010 0000
-			b->m_transmitter = (buffer[ i ] & 0x20);
+			b->m_sensor = (buffer[ i ] & 0x20);
 		}
 	}
 
@@ -602,14 +622,30 @@ fob::load_flock_status( void )
 	bool master_found = false;
 	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
 		//select the current bird
+		sleep( 1 );
 		if( !select_bird( *m_birds[ i ] ) ) {
 			return false;
 		}
 
+		//any errors?
+		clear_device( );
+		usleep( 500000 );
+		if( check_error( ) ) {
+			return *this;
+		}
+
 		//get the status of this bird
+		sleep( 1 );
 		if( !examine( BIRD_STATUS, buffer ) ) {
 			//examine sets error
 			return false;
+		}
+
+		//any errors?
+		clear_device( );
+		usleep( 500000 );
+		if( check_error( ) ) {
+			return *this;
 		}
 
 		//is this bird a master
@@ -674,6 +710,13 @@ fob::set_hemisphere( fob::bird& b, fob::hemisphere hemi )
 		return false;
 	}
 
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return *this;
+	}
+
 	//determine hemisphere cmd chars
 	unsigned char cmd[ 2 ];
 	switch( hemi ) {
@@ -719,6 +762,13 @@ fob::set_hemisphere( fob::bird& b, fob::hemisphere hemi )
 		return false;
 	}
 
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return *this;
+	}
+
 	//success
 	return true;
 }
@@ -759,13 +809,22 @@ bool
 fob::check_error( void )
 {
 	unsigned char buffer[ 256 ];
+	std::cerr << "examine!" << std::endl;
 	if( !examine( ERROR_CODE, buffer ) ) {
 		//examine sets error
 		return true;
 	}
+	std::cerr << "examine done!" << std::endl;
 
 	int code = (int)(buffer[ 0 ]);
 	DEBUG( "fob::check_error: code: " << code );
+	
+	if( (code > 35) || (code < 0) ) {
+		set_error( "fob::check_error: fob is returning corrupt data, "
+		 "please reset the flock" );
+		return true;
+	}
+	
 	if( code ) {
 		set_error( "fob::check_error: code: %d", code );
 		return true;
@@ -902,11 +961,25 @@ fob::open( const std::string& device_name,
 	unsigned char group = 0x01;
 	DEBUG( "fob::open: changing into group mode" );
 	change( GROUP, &group );
+	
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return *this;
+	}
 
 	//now send the point mode command
 	clear_device( );
 	DEBUG( "fob::open: changing into point mode" );
 	send_cmd( POINT );
+	
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return *this;
+	}
 	
 	//we no longer should be in group mode
 	clear_device( );
@@ -914,6 +987,13 @@ fob::open( const std::string& device_name,
 	DEBUG( "fob::open: changing out of group mode" );
 	change( GROUP, &group );
 	clear_device( );
+
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return *this;
+	}
 
 	//must be in normal addressing mode
 	clear_device( );
@@ -924,10 +1004,25 @@ fob::open( const std::string& device_name,
 			<< std::endl;
 	}
 
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return *this;
+	}
+
 	//get bird info
 	clear_device( );
+	usleep( 500000 );
 	if( !load_flock_status( ) ) {
 		//get_flock_status sets error
+		return *this;
+	}
+	
+	//any errors?
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
 		return *this;
 	}
 
@@ -942,6 +1037,7 @@ fob::open( const std::string& device_name,
 	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
 		if( m_birds[ i ]->m_sensor ) {
 			clear_device( );
+			usleep( 500000 );
 			if( !set_hemisphere( *m_birds[ i ], hemi ) ) {
 				//set_hemisphere sets error
 				return *this;
@@ -951,6 +1047,7 @@ fob::open( const std::string& device_name,
 
 	//any errors?
 	clear_device( );
+	usleep( 500000 );
 	if( check_error( ) ) {
 		return *this;
 	}
