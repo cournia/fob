@@ -21,8 +21,8 @@ const fob::mode fob::ORIENTATION = 0x02;
 const fob::mode fob::BUTTONS = 0x04;
 
 const unsigned char fob::BUTTON_LEFT = 0x10;
-const unsigned char fob::BUTTON_MIDDLE = 0x20;
-const unsigned char fob::BUTTON_RIGHT = 0x40;
+const unsigned char fob::BUTTON_MIDDLE = 0x30;
+const unsigned char fob::BUTTON_RIGHT = 0x70;
 
 const unsigned char fob::STREAM = '@';
 
@@ -77,6 +77,12 @@ unpack( unsigned char *buffer, short *output, int size )
 bool 
 fob::bird::set_mode( fob::mode mask )
 {
+	//bird can't only just send buttons
+	if( mask == fob::BUTTONS ) {
+		m_flock.set_error( "fob::bird::set_mode: must specify data mode with buttons" );
+		return false;
+	}
+
 	//select this bird
 	usleep( 500000 );
 	if( !m_flock.select_bird( *this ) ) {
@@ -467,6 +473,9 @@ fob::print_bird_status( void )
 		}
 		std::cerr << std::endl;
 	}
+
+	//success
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
