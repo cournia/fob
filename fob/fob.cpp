@@ -938,7 +938,7 @@ fob::check_error( void )
 		return true;
 	}
 
-	if( (code == 31) || (code == 32) ) {
+	if( (code == 31) || (code == 32) || (code == 6) ) {
 		//set_error( "fob::check_error: ignoring code: %d", code );
 		DEBUG( "fob::check_error: ignoring code: " << code );
 		return false;
