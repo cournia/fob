@@ -6,7 +6,7 @@
 
 #include <iostream>
 #include <cassert>
-#include "mathematics.h"
+#include "fob/mathematics.h"
 
 //////////////////////////////////////////////////////////////////////////
 namespace math {

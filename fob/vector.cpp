@@ -1,7 +1,7 @@
 //FILE:         vector.cpp
 //AUTHOR:       Nathan Cournia <nathan@cournia.com>
 
-#include "vector.h"
+#include "fob/vector.h"
 
 //////////////////////////////////////////////////////////////////////////
 const math::vector3 math::vector3::ZERO( 0.0, 0.0, 0.0 );

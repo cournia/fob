@@ -2,7 +2,7 @@
 //AUTHOR:       Nathan Cournia <nathan@cournia.com>
 
 #include <iomanip>
-#include "matrix.h"
+#include "fob/matrix.h"
 
 //////////////////////////////////////////////////////////////////////////
 const math::matrix4 math::matrix4::IDENTITY(

@@ -1,4 +1,4 @@
-SUBDIRS = src 
+SUBDIRS = fob 
 
 DIST_SUBDIRS = $(SUBDIRS) test
 

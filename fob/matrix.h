@@ -9,8 +9,8 @@
 
 #include <iostream>
 #include <cassert>
-#include "vector.h"
-#include "mathematics.h"
+#include "fob/vector.h"
+#include "fob/mathematics.h"
 
 namespace math {
 	class matrix4;

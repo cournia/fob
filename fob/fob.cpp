@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include "fob.h"
+#include "fob/fob.h"
 
 #define DEBUG(x) (std::cerr << x << std::endl)
 //#define DEBUG(x)
@@ -316,6 +316,10 @@ fob::bird::update_orientation( void )
 	//FIXME m_angles should contain the angles with m_rotation
 	//      applied 
 	m_angles = m_fob_angles;
+
+	//update matrix
+	m_quaternion.get_rotation_matrix( m_matrix );
+	m_matrix.set_translation( m_position );
 
 	//orientation is new
 	m_ori_dirty = false;

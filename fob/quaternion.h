@@ -7,8 +7,8 @@
 
 #include <iostream>
 #include <cmath>
-#include "vector.h"
-#include "matrix.h"
+#include "fob/vector.h"
+#include "fob/matrix.h"
 
 namespace math {
 	class quaternion;

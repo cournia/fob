@@ -10,8 +10,8 @@
 #include <cstdarg>
 #include <pthread.h>
 #include <termios.h>
-#include "quaternion.h"
-#include "vector.h"
+#include "fob/quaternion.h"
+#include "fob/vector.h"
 
 #define _POSIX_SOURCE 1
 
@@ -108,6 +108,7 @@ public:
 		math::vector3 m_fob_angles; //!< Orientation of the bird (in fob coords).
 		math::vector3 m_angles; //!< Orientation of the bird.
 		math::quaternion m_quaternion; //!< Orientation of the bird.
+		math::matrix4 m_matrix; //!< Orientation/Position of the bird.
 		math::quaternion m_rotation; //!< Rotation to apply to the bird's orientation.
 		unsigned int m_address; //! Address of the bird.
 		bool m_sensor; //!< If a sensor is attached.
@@ -166,6 +167,7 @@ public:
 			m_fob_angles = cpy.m_fob_angles;
 			m_angles = cpy.m_angles;
 			m_quaternion = cpy.m_quaternion;
+			m_matrix = cpy.m_matrix;
 			m_address = cpy.m_address;
 			m_sensor = cpy.m_sensor;
 			m_transmitter = cpy.m_transmitter;
@@ -197,6 +199,7 @@ public:
 			m_fob_angles = rhs.m_fob_angles;
 			m_angles = rhs.m_angles;
 			m_quaternion = rhs.m_quaternion;
+			m_matrix = rhs.m_matrix;
 			m_address = rhs.m_address;
 			m_sensor = rhs.m_sensor;
 			m_transmitter = rhs.m_transmitter;
@@ -220,6 +223,9 @@ public:
 		}
 
 		//! Gets the bird's angles (in degress).
+		/*!
+		 * Rotations are relative to the fixed global coordinate frame.
+		 */
 		inline void get_angles( math::vector3& output ) {
 			lock_data( );
 			if( m_ori_dirty ) {
@@ -244,6 +250,19 @@ public:
 				update_orientation( );
 			}
 			output = m_quaternion;
+			unlock_data( );
+		}
+		
+		//! Gets a 4x4 matrix describing the bird's orientation/position.
+		/*!
+		 * The returned matrix is in row major format.
+		 */
+		inline void get_matrix( math::matrix4& output ) {
+			lock_data( );
+			if( m_ori_dirty ) {
+				update_orientation( );
+			}
+			output = m_matrix;
 			unlock_data( );
 		}
 

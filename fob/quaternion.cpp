@@ -2,7 +2,7 @@
 //AUTHOR:       Nathan Cournia <nathan@cournia.com>
 
 #include <cassert>
-#include "quaternion.h"
+#include "fob/quaternion.h"
 
 //////////////////////////////////////////////////////////////////////////
 const math::quaternion math::quaternion::IDENTITY( 

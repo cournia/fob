@@ -134,4 +134,5 @@ ACX_PTHREAD( have_pthread=yes, [
 AC_OUTPUT([
 	Makefile
 	fob/Makefile
+	test/Makefile
 ])
