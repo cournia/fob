@@ -4,7 +4,7 @@ dnl
 dnl This file modified from libsig++ 1.2.5
 dnl http://libsigc.sf.net
 
-AC_INIT([fob],[1.0.1])
+AC_INIT([fob],[1.0.2])
 
 define(AC_PUSH_LIB,[dnl
 ifdef([__LIB__],,[define([__LIB__],0)])dnl

@@ -29,8 +29,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <GL/glu.h>
 #include <GL/glut.h>
 #include "camera.h"
-#include "commandoptions.h"
 #include "fob/fob.h"
+#include "args.h"
 
 #define ENABLE_FBB 1
 
@@ -38,53 +38,6 @@ const unsigned int MAX_ENTS = 14;
 
 void render_axis( float len );
 void render_buttons( bool x, bool y, bool z, float len );
-
-///////////////////////////////////////////////////////////////////////////////
-struct cmd_args {
-	std::string serial;
-	unsigned long sleep_ms;
-	bool old;
-	fob::port_speed speed;
-
-	cmd_args( void ): 
-		serial( "/dev/ttyS0" ), 
-		sleep_ms( 500 ),
-		old( false ),
-		speed( fob::FAST )
-	{ }
-
-	bool parse( int argc, const char *argv[ ] );
-};
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-bool
-cmd_args::parse( int argc, const char *argv[ ] )
-{
-	//command line parser object
-	commandoptions c;
-
-	//register flags/options
-	c.register_option( sleep_ms, "sleep", 's', "Time to sleep between commands (ms)", "MILLISECONDS" );
-	c.register_flag( old, "old", 'o', "Compensate for older flock firmware" );
-	c.register_argument( serial, "device", "Serial port flock is connected too" );
-
-	try {
-		c.process_command_line( argc, argv );
-	} catch( commandoptions_error& ex ) {
-		std::cerr << "error: " << ex.what( ) << std::endl;
-		return false;
-	}
-
-	//check for old hardware
-	if( old ) speed = fob::SLOW;
-
-	//success
-	return true;
-}
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 struct entity {

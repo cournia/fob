@@ -25,67 +25,119 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <iostream>
 #include <unistd.h>
+#include <signal.h>
 #include "fob/fob.h"
+#include "args.h"
 
-int main( int argc, char *argv[] )
+//global fun
+fob flock;
+bool quit = false;
+
+
+
+//////////////////////////////////////////////////////////////////////////
+//signal handler to catch CTRL-C
+void 
+catch_ctrl_c( int ) {
+	quit = true;
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+std::string
+get_button_str( unsigned char btn )
 {
-	//check command line
-	if( argc != 2 ) {
-		std::cerr << "usage: fly port" << std::endl;
+	if( 0 == btn ) {
+		return "NON";
+	} else if( fob::BUTTON_LEFT == btn ) {
+		return "LFT";
+	} else if( fob::BUTTON_RIGHT == btn ) {
+		return "RGT";
+	} else if( fob::BUTTON_MIDDLE == btn ) {
+		return "MID";
+	} else {
+		return "UNK";
+	}
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+int 
+main( int argc, char *argv[] )
+{
+	//set ctrl-c signal handler
+	signal( SIGINT, catch_ctrl_c );
+	
+	//parse arguments
+	cmd_args args;
+	if( !args.parse( argc, (const char**)argv ) ) {
 		return 1;
 	}
-	std::string device = argv[ 1 ];
 
-	// open the flock of birds on serial port 1
-	// 
-	// the sensor is installed in the ceiling so,
-	// tell the flock that all birds will operate in the DOWN
-	// hemisphere
-	//
-	// we have a fairly new version of the fob hardware, so
-	// run it at a high baud rate
-	fob flock( device, fob::DOWN, fob::FAST );
+	//local vars
+	fob::hemisphere hemisphere = fob::DOWN;
+	
+	//talk to flock
+	flock.open( args.serial, hemisphere, args.speed, args.sleep_ms );
 	if( !flock ) {
 		std::cerr << "fatal: " << flock.get_error( ) << std::endl;
 		return 1;
 	}
 
-	//get a list of birds connected to the flock
+	//get a list of birds connected to the machine
 	fob::bird_list& birds = flock.get_birds( );
 
 	//report how many birds are present
 	std::cout << "number of birds: " << birds.size( ) << std::endl;
 
-	//for each bird, set that we want position and orientation information
+	//for each bird, set that we want position and button information
 	for( unsigned int i = 0; i < birds.size( ); ++i ) {
-		if( !birds[ i ]->set_mode( fob::POSITION | fob::ORIENTATION ) ) {
+		if( !birds[ i ]->set_mode( fob::POSITION | fob::BUTTONS ) ) {
 			std::cerr << "fatal: " << flock.get_error( ) << std::endl;
 			return 1;
 		}
 	}
+
 	//birds configured, set the flock flying
 	flock.fly( );
 
 	//let the bird start up . . .
 	sleep( 1 );
 
-	//report position and orientation for each bird
-	math::vector3 pos;
-	math::quaternion quat;
+	//everything looks good, tell the user what's going on
+	std::cerr << birds.size( ) << " birds opened on " << args.serial << std::endl;
+	std::cerr << "Reporting position/button information" << std::endl;
+	std::cerr << "(Press CTRL-C to quit)" << std::endl;
 
-	while( 1 ) {
+	//report position and orientation for each bird
+	float pos[ 3 ];
+	unsigned char button;
+	std::string button_str;
+
+	while( !quit ) {
 		for( unsigned int i = 0; i < birds.size( ); ++i ) {
-			//get position and orientation information from the bird
+			//get position and button information from the bird
 			birds[ i ]->get_position( pos );
-			birds[ i ]->get_quaternion( quat );
+			button = birds[ i ]->get_buttons( );
+
+			//get a string to describe the button pressed
+			button_str = get_button_str( button );
 
 			//report
-			std::cout << i 
-				<< ": p: " << pos
-				<< " q: " << quat
-				<< std::endl;
+			fprintf( stderr, "x: %6.2f y: %6.2f z: %6.2f b: %s ",
+				pos[ 0 ], pos[ 1 ], pos[ 2 ], button_str.c_str( ) );
+		}
+
+		for( unsigned int j = 0; j < 37 * birds.size( ); ++j ) {
+			fprintf( stderr, "\b" );
 		}
 	}
 
+	//shutdown the flock
+	flock.close( );
+
+	//success, no errors
 	return 0;
 }

@@ -248,6 +248,13 @@ public:
 			unlock_data( );
 		}
 
+		//! Gets the bird's position.
+		inline void get_position( real_t output[ 3 ] ) const {
+			lock_data( );
+			memcpy( output, static_cast<const real_t*>( m_position ), sizeof( real_t ) * 3 );
+			unlock_data( );
+		}
+
 		//! Gets the bird's angles (in degress).
 		/*!
 		 * Rotations are relative to the fixed global coordinate frame.

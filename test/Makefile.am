@@ -7,11 +7,13 @@ noinst_PROGRAMS = \
 	fly \
 	fly2 
 
-fly_SOURCES = fly.cpp
+fly_SOURCES = \
+	commandoptions.cpp \
+	fly.cpp
 
 fly2_LDADD = \
 	$(LDADD) \
-	-lGL -lGLU -lglut
+	-L/usr/X11R6/lib -lGL -lGLU -lglut
 fly2_SOURCES = \
 	commandoptions.cpp \
 	fly2.cpp \
