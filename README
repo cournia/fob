@@ -1,4 +1,4 @@
-- Flock of Birds Library 1.0.1
+- Flock of Birds Library 1.0.2
 
 ==============
 Installing the library should be as easy as:
@@ -40,7 +40,7 @@ the operation of the flock once the "fly( )" has been called.
 ==============
 API documentation can be generated via Doxygen:
 
-doxygen fob.doxygen
+make docs
 
 This should create a directory named "api" in which you'll find both
 html and tex based documentation.
