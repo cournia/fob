@@ -4,7 +4,7 @@ dnl
 dnl This file modified from libsig++ 1.2.5
 dnl http://libsigc.sf.net
 
-AC_INIT([fob],[1.0.0])
+AC_INIT([fob],[1.0.1])
 
 define(AC_PUSH_LIB,[dnl
 ifdef([__LIB__],,[define([__LIB__],0)])dnl
@@ -20,7 +20,7 @@ dnl
 dnl Source packaging numbers
 FOB_MAJOR_VERSION=1
 FOB_MINOR_VERSION=0
-FOB_MICRO_VERSION=0
+FOB_MICRO_VERSION=1
 
 FOB_VERSION=$FOB_MAJOR_VERSION.$FOB_MINOR_VERSION.$FOB_MICRO_VERSION
 
@@ -31,7 +31,7 @@ FOB_VERSION=$FOB_MAJOR_VERSION.$FOB_MINOR_VERSION.$FOB_MICRO_VERSION
 #  ? :+1 : ?   == just some internal changes, nothing breaks but might work 
 #                 better
 # CURRENT : REVISION : AGE
-LIBFOB_SO_VERSION=1:0:0
+LIBFOB_SO_VERSION=1:0:1
 AC_SUBST(LIBFOB_SO_VERSION, $LIBFOB_SO_VERSION)
 
 dnl AC_SUBST(FOB_RELEASE, $FOB_RELEASE)

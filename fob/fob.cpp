@@ -406,6 +406,37 @@ fob::clear_device( void )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+int
+fob::read( unsigned char *buffer, int bytes )
+{
+	assert( bytes > 0 );
+
+	//read in 1 byte at a time
+	unsigned int read_error = 0;
+	int i, count;
+	for( i = 0; (i < bytes) && (read_error < 5); ) {
+		//read in 1 byte at a time
+		if( (count = ::read( m_device, &buffer[ i ], 1 )) ) {
+			if( count < 0 ) {
+				//error
+				if( errno != EINTR ) {
+					//error code returned, but not an interrupt
+					++read_error;
+				}
+			} else if( count < 1 ) {
+				//for some reason, couldn't read a byte (shouldn't happen)
+				++read_error;
+			} else {
+				//byte read
+				++i;
+			}
+		}
+	}
+
+	return i;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 bool
 fob::send_cmd( unsigned char cmd )
 {
@@ -455,7 +486,7 @@ fob::examine( fob::examine_option param, unsigned char *output )
 	}
 
 	//get reply
-	int reply = read( m_device, output, param.reply_bytes );
+	int reply = read( output, param.reply_bytes );
 	if( reply < 0 ) {
 		//write error
 		set_error( "fob::examine: could not recv examine reply: %s", 
@@ -1038,7 +1069,7 @@ fob::update( void )
 	
 	//read in 1 byte as a type (as suggested by fbb manual)
 	while( (phases_found < 2) && (read_error < 5) ) {
-		if( read( m_device, &buffer[ i ], 1 ) == 1 ) {
+		if( ::read( m_device, &buffer[ i ], 1 ) == 1 ) {
 			//successful read, does this byte have the phasing bit
 			//mask with 1000 000
 			if( buffer[ i ] & 0x80 ) {

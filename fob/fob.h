@@ -408,6 +408,9 @@ public:
 	//! Flush (clears) all input/output buffers to the serial port where the Flock of Birds is connected.
 	void clear_device( void );
 
+	//! Reads data from the serial port in an interrupt safe manner.
+	int read( unsigned char *output, int bytes );
+
 	//! Sends a 1 character command.
 	bool send_cmd( unsigned char cmd );
 
