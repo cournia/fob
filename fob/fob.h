@@ -218,7 +218,9 @@ public:
 		//! Gets the bird's position.
 		inline void get_position( math::vector3& output ) const {
 			lock_data( );
-			output = m_position;
+			if( m_ori_dirty ) {
+				output = m_position;
+			}
 			unlock_data( );
 		}
 
@@ -458,7 +460,7 @@ public:
 	/*!
 	 * \returns \c false if an error occurred.
 	 */
-	bool auto_configure( void );
+	bool auto_configure( unsigned int num_birds );
 
 	//! Sets the voltage of the RTS (Ready to Send) pin.
 	/*!

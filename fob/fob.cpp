@@ -2,6 +2,8 @@
 //AUTHOR:       Nathan Cournia <nathan@cournia.com>
 //FIXME:        endian issues?  if so, can be fixed in examine,
 //              change, send_cmd, unpack, etc.
+//NOTE:         Checking the error seems to send the next command to the
+//              master bird.
 
 #include <iostream>
 #include <iomanip>
@@ -82,14 +84,6 @@ fob::bird::set_mode( fob::mode mask )
 		return false;
 	}
 
-	/*
-	m_flock.clear_device( );
-	usleep( 500000 );
-	if( m_flock.check_error( ) ) {
-		return false;
-	}
-	*/
-	
 	//what info does the user want
 	usleep( 500000 );
 	if( (mask & (fob::POSITION | fob::ORIENTATION)) == 
@@ -116,28 +110,12 @@ fob::bird::set_mode( fob::mode mask )
 		}
 	}
 
-	/*
-	m_flock.clear_device( );
-	usleep( 500000 );
-	if( m_flock.check_error( ) ) {
-		return false;
-	}
-	*/
-	
 	//select this bird
 	usleep( 500000 );
 	if( !m_flock.select_bird( *this ) ) {
 		//select_bird will set error in parent flock
 		return false;
 	}
-
-	/*
-	m_flock.clear_device( );
-	usleep( 500000 );
-	if( m_flock.check_error( ) ) {
-		return false;
-	}
-	*/
 
 	//do we want button info
 	unsigned char button_mode;
@@ -157,6 +135,7 @@ fob::bird::set_mode( fob::mode mask )
 		return false;
 	}
 
+	//check for error
 	m_flock.clear_device( );
 	usleep( 500000 );
 	if( m_flock.check_error( ) ) {
@@ -290,6 +269,9 @@ fob::bird::unpack_pos( unsigned char *buffer, int size )
 		static_cast<float>( unpacked[ 0 ] ) * pos_scale
 
 	);
+
+	//mark new orientation input
+	m_ori_dirty = true;
 
 	//let the user have fun
 	unlock_data( );
@@ -443,9 +425,17 @@ fob::select_bird( int bird_addr )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//totally for debugging, must be run before fly
+//prints to stderr
 bool 
 fob::print_bird_status( void )
 {
+	if( m_fly ) {
+		//we're flying, can't send this command
+		set_error( "fob::print_bird_status: can not get status while flying" );
+		return false;
+	}
+	
 	unsigned char buffer[ 256 ];
 	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
 		//select the current bird
@@ -465,7 +455,7 @@ fob::print_bird_status( void )
 		clear_device( );
 		usleep( 500000 );
 		if( check_error( ) ) {
-			return *this;
+			return false;
 		}
 
 		std::cerr << "bird status: " << i << " ";
@@ -620,6 +610,7 @@ bool
 fob::check_address_mode( void )
 {
 	unsigned char buffer[ 256 ];
+	usleep( 500000 );
 	if( !examine( ADDR_MODE, buffer ) ) {
 		//examine sets error
 		return false;
@@ -633,6 +624,13 @@ fob::check_address_mode( void )
 		return false;
 	}
 
+	//check for error
+	clear_device( );
+	usleep( 500000 );
+	if( check_error( ) ) {
+		return false;
+	}
+
 	//address mode ok
 	return true;
 }
@@ -643,18 +641,17 @@ fob::load_flock_status( void )
 {
 	//get status from flock
 	unsigned char buffer[ 256 ];
-	sleep( 2 );
+	usleep( 500000 );
 	if( !examine( FLOCK_STATUS, buffer ) ) {
 		//examine sets error
 		return false;
 	}
-	sleep( 2 );
 
 	//any errors?
 	clear_device( );
 	usleep( 500000 );
 	if( check_error( ) ) {
-		return *this;
+		return false;
 	}
 	
 	//flock status reply format
@@ -669,8 +666,8 @@ fob::load_flock_status( void )
 	
 	//see what is attached
 	for( int i = 0; i < FOB_MAX_BIRDS; ++i ) {
-		std::cerr << i << ": ";
-		for( unsigned int j = 0; j < 8; ++j ) {
+		std::cerr << "flock status: " << i << ": ";
+		for( int j = 7; j >= 0; --j ) {
 			std::cerr << ((buffer[ i ] >> j) & 0x1);
 		}
 		std::cerr << std::endl;
@@ -706,18 +703,12 @@ fob::load_flock_status( void )
 
 	//get more information about each bird
 	bool master_found = false;
+	m_master = 666;
 	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
 		//select the current bird
 		sleep( 1 );
 		if( !select_bird( *m_birds[ i ] ) ) {
 			return false;
-		}
-
-		//any errors?
-		clear_device( );
-		usleep( 500000 );
-		if( check_error( ) ) {
-			return *this;
 		}
 
 		//get the status of this bird
@@ -731,7 +722,7 @@ fob::load_flock_status( void )
 		clear_device( );
 		usleep( 500000 );
 		if( check_error( ) ) {
-			return *this;
+			return false;
 		}
 
 		//is this bird a master
@@ -761,9 +752,9 @@ fob::load_flock_status( void )
 ///////////////////////////////////////////////////////////////////////////////
 //sleep times are from fbb programming manual
 bool
-fob::auto_configure( void )
+fob::auto_configure( unsigned int birds )
 {
-	if( m_birds.size( ) < 1 ) {
+	if( birds == 0 ) {
 		set_error( "fob::auto_configure: no birds detected" );
 		return false;
 	}
@@ -776,56 +767,40 @@ fob::auto_configure( void )
 		return false;
 	}
 
-	//any errors?
-	clear_device( );
-	sleep( 1 );
-	if( check_error( ) ) {
-		return *this;
-	}
-
-	//must sleep 600ms before the autoconfig call
-	DEBUG( "fob::auto_configure: sleeping 600ms before autoconfig" );
+	//must sleep before the autoconfig call
+	DEBUG( "fob::auto_configure: sleeping before autoconfig" );
 	sleep( 2 );
 	
-	unsigned char num_birds = (int)(m_birds.size( ));
+	unsigned char num_birds = (int)birds;
 	DEBUG( "fob::auto_configure: birds to configure: " << (int)num_birds );
 	if( !change( FBB_AUTO_CONFIG, &num_birds ) ) {
 		//change sets error
 		return false;
 	}
 	
-	//must sleep 600ms after the autoconfig call
+	//must sleep after the autoconfig call
 	DEBUG( "fob::auto_configure: sleeping 600ms after autoconfig" );
 	sleep( 2 );
-
-	/*
-	sleep( 1 );
-	if( !select_bird( m_master ) ) {
-		//select_bird sets error
-		return false;
-	}
-	*/
 
 	//any errors?
 	clear_device( );
 	usleep( 500000 );
 	if( check_error( ) ) {
-		return *this;
+		return false;
 	}
 
 	//set birds running
-	sleep( 2 );
+	usleep( 500000 );
 	if( !send_cmd( RUN ) ) {
 		//send_cmd sets error
 		return false;
 	}
 
 	//any errors?
-	sleep( 2 );
 	clear_device( );
-	sleep( 2 );
+	sleep( 1 );
 	if( check_error( ) ) {
-		return *this;
+		return false;
 	}
 
 	//success
@@ -837,16 +812,10 @@ bool
 fob::set_hemisphere( fob::bird& b, fob::hemisphere hemi )
 {
 	//select the bird
+	usleep( 500000 );
 	if( !select_bird( b ) ) {
 		//select_bird sets error
 		return false;
-	}
-
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
 	}
 
 	//determine hemisphere cmd chars
@@ -889,6 +858,7 @@ fob::set_hemisphere( fob::bird& b, fob::hemisphere hemi )
 	}
 
 	//send hemisphere command
+	usleep( 500000 );
 	if( !send_cmd( HEMISPHERE, cmd ) ) {
 		//send_cmd sets error
 		return false;
@@ -898,7 +868,7 @@ fob::set_hemisphere( fob::bird& b, fob::hemisphere hemi )
 	clear_device( );
 	usleep( 500000 );
 	if( check_error( ) ) {
-		return *this;
+		return false;
 	}
 
 	//success
@@ -942,12 +912,10 @@ bool
 fob::check_error( void )
 {
 	unsigned char buffer[ 256 ];
-	//std::cerr << "examine!" << std::endl;
 	if( !examine( ERROR_CODE, buffer ) ) {
 		//examine sets error
 		return true;
 	}
-	//std::cerr << "examine done!" << std::endl;
 
 	//we should get back a single byte which contains the error code
 	int code = (int)(buffer[ 0 ]);
@@ -980,7 +948,7 @@ fob::check_error( void )
 
 ///////////////////////////////////////////////////////////////////////////////
 fob::fob( void ): m_error( true ), m_error_msg( "uninitialized" ),
-	m_open( false ), m_device( -1 ), m_master( 666 ), m_fly( false ),
+	m_open( false ), m_device( -1 ), m_master( 1 ), m_fly( false ),
 	m_group( false ), m_save( 0x00 )
 {
 	//create streaming thread
@@ -998,7 +966,7 @@ fob::fob( void ): m_error( true ), m_error_msg( "uninitialized" ),
 fob::fob( const std::string& device_name, fob::hemisphere hemi,
 	fob::port_speed speed ):
 	m_error( true ), m_error_msg( "uninitialized" ),
-	m_open( false ), m_device( -1 ), m_master( 666 ), m_fly( false ),
+	m_open( false ), m_device( -1 ), m_master( 1 ), m_fly( false ),
 	m_group( false ), m_save( 0x00 )
 {
 	//create streaming thread
@@ -1099,107 +1067,11 @@ fob::open( const std::string& device_name,
 	}
 
 
-
-
-
-
-	//XXX
-	
-
-	if( !select_bird( 1 ) ) {
-		//select_bird sets error
-		return *this;
-	}
-
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
-
-	//must sleep 600ms before the autoconfig call
-	DEBUG( "fob::configure: sleeping 600ms before autoconfig" );
-	sleep( 2 );
-	
-	unsigned char num_birds = 1;
-	DEBUG( "fob::configure: birds to configure: 1" );
-	if( !change( FBB_AUTO_CONFIG, &num_birds ) ) {
-		//change sets error
-		return *this;
-	}
-	
-	//must sleep 600ms after the autoconfig call
-	DEBUG( "fob::configure: sleeping 600ms after autoconfig" );
-	sleep( 2 );
-
-	/*
-	usleep( 500000 );
-	if( !select_bird( 1 ) ) {
-		//select_bird sets error
-		return *this;
-	}
-	*/
-
-	//any errors?
-	sleep( 2 );
-	//clear_device( );
-	sleep( 1 );
-	if( check_error( ) ) {
-		return *this;
-	}
-
-	//set birds running
-	sleep( 1 );
-	if( !send_cmd( RUN ) ) {
-		//send_cmd sets error
-		return *this;
-	}
-
-	//any errors?
-	sleep( 1 );
-	//clear_device( );
-	sleep( 2 );
-	if( check_error( ) ) {
-		return *this;
-	}
-
-	//XXX
-
-
-
-
-
-
-	
-	/*
-	//auto-configure
-	clear_device( );
-	if( !auto_configure( ) ) {
+	//do an initial configure (this seems to be neccessary)
+	if( !auto_configure( 1 ) ) {
 		//auto_configure sets error
 		return *this;
 	}
-
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
-	*/
-	//XXX
-
-
-
-
-
-
-
-
-
-
-
-
 
 	/*
 	
@@ -1252,49 +1124,27 @@ fob::open( const std::string& device_name,
 	//must be in normal addressing mode
 	clear_device( );
 	DEBUG( "fob::open: checking addressing mode" );
-	sleep( 1 );
 	if( !check_address_mode( ) ) {
 		//old bird versions may not respond to this check
 		std::cerr << "fob::open: warning: addressing mode may be invalid." 
 			<< std::endl;
 	}
 
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
-
 	//get bird info
 	clear_device( );
-	usleep( 500000 );
 	if( !load_flock_status( ) ) {
 		//get_flock_status sets error
 		return *this;
 	}
-	
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
 
-	//auto-configure
+
+	//we now have bird info, do the real configure
 	clear_device( );
-	if( !auto_configure( ) ) {
+	if( !auto_configure( m_birds.size( ) ) ) {
 		//auto_configure sets error
 		return *this;
 	}
 
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
-	
 	//set the hemisphere for each bird
 	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
 		if( m_birds[ i ]->m_sensor ) {
@@ -1307,13 +1157,6 @@ fob::open( const std::string& device_name,
 		}
 	}
 
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
-	
 	//success
 	DEBUG( "fob::open: success" );
 	m_open = true;
@@ -1335,11 +1178,14 @@ fob::close( void )
 		select_bird( *m_birds[ 0 ] );
 	}
 	clear_device( );
+	usleep( 500000 );
 	send_cmd( POINT );
 	clear_device( );
+	usleep( 500000 );
 	send_cmd( SLEEP );
 
 	//put rts in low voltage (standby mode)
+	usleep( 500000 );
 	set_rts( false );
 	
 	//set the serial port settings to their old values
@@ -1372,44 +1218,6 @@ fob::fly( void )
 	}
 	unlock( );
 
-	/*
-	//XXX
-	//auto-configure
-	clear_device( );
-	if( !auto_configure( ) ) {
-		//auto_configure sets error
-		return *this;
-	}
-
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
-	
-	//set the hemisphere for each bird
-	for( unsigned int i = 0; i < m_birds.size( ); ++i ) {
-		if( m_birds[ i ]->m_sensor ) {
-			clear_device( );
-			usleep( 500000 );
-			if( !set_hemisphere( *m_birds[ i ], m_hemisphere ) ) {
-				//set_hemisphere sets error
-				return *this;
-			}
-		}
-	}
-
-	//any errors?
-	clear_device( );
-	usleep( 500000 );
-	if( check_error( ) ) {
-		return *this;
-	}
-	//XXX
-	*/
-
-	
 	//place the flock into group mode
 	DEBUG( "fob::fly: sending group command" );
 	unsigned char options = 0x1;
@@ -1434,9 +1242,6 @@ fob::fly( void )
 	lock( );
 	m_fly = true;
 	unlock( );
-
-	//usleep( 500000 );
-	//check_error( );
 
 	//success
 	return true;
