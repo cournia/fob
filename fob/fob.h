@@ -235,13 +235,18 @@ public:
 			unlock_data( );
 		}
 
-		/*
-		inline void get_fob_angles( math::vector3& output ) {
+		//! Gets the bird's angles (in degress).
+		/*!
+		 * Rotations are relative to the fixed global coordinate frame.
+		 */
+		inline void get_angles( real_t output[ 3 ] ) {
 			lock_data( );
-			output = m_fob_angles;
+			if( m_ori_dirty ) {
+				update_orientation( );
+			}
+			memcpy( output, static_cast<const real_t*>( m_angles ), sizeof( real_t ) * 3 );
 			unlock_data( );
 		}
-		*/
 
 		//! Gets the bird's orientation.
 		inline void get_quaternion( math::quaternion& output ) {
@@ -250,6 +255,20 @@ public:
 				update_orientation( );
 			}
 			output = m_quaternion;
+			unlock_data( );
+		}
+
+		//! Gets the bird's orientation.
+		/*
+		 * Returns the quaternion in x y z w order.
+		 */
+		inline void get_quaternion( real_t output[ 4 ] ) {
+			lock_data( );
+			if( m_ori_dirty ) {
+				update_orientation( );
+			}
+			memcpy( output, static_cast<const real_t*>( m_quaternion.vec( ) ), sizeof( real_t ) * 3 );
+			output[ 3 ] = m_quaternion.w( );
 			unlock_data( );
 		}
 		
@@ -266,6 +285,19 @@ public:
 			unlock_data( );
 		}
 
+		//! Gets a 4x4 matrix describing the bird's orientation/position.
+		/*!
+		 * The returned matrix is in row major format.
+		 */
+		inline void get_matrix( real_t output[ 16 ] ) {
+			lock_data( );
+			if( m_ori_dirty ) {
+				update_orientation( );
+			}
+			memcpy( output, static_cast<const real_t*>( m_matrix ), sizeof( real_t ) * 16 );
+			unlock_data( );
+		}
+		
 		//! Sets what type of data we will get back from the flock for this bird.
 		/*!
 		 * \param mask Bitwised or'ed \c fob::mode telling what data we want back from the flock.  Options are \c fob::POSITION, \c fob::ORIENTATION, and \c fob::BUTTONS.
