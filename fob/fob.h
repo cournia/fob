@@ -32,6 +32,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cstdarg>
 #include <pthread.h>
 #include <termios.h>
+#include <unistd.h>
 #include "fob/quaternion.h"
 #include "fob/vector.h"
 
