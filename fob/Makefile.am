@@ -1,4 +1,4 @@
-AUTOMAKE_OPTIONS = 1.6
+#AUTOMAKE_OPTIONS = 1.6
 
 FOB_CPP = fob.cpp
 MATH_CPP = quaternion.cpp vector.cpp matrix.cpp

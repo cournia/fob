@@ -14,7 +14,7 @@ fly_SOURCES = \
 
 fly2_LDADD = \
 	$(LDADD) \
-	-L/usr/X11R6/lib -lGL -lGLU -lglut
+	-lGL -lGLU -lglut
 fly2_SOURCES = \
 	args.h \
 	commandoptions.cpp commandoptions.h \
