@@ -1375,6 +1375,7 @@ fob::update( void )
 	
 	//read in 1 byte as a type (as suggested by fbb manual)
 	while( (phases_found < 2) && (read_error < 5) ) {
+		//FIXME should i be checking ofr EINTR here?
 		if( ::read( m_device, &buffer[ i ], 1 ) == 1 ) {
 			//successful read, does this byte have the phasing bit
 			//mask with 1000 000
