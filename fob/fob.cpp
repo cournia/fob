@@ -1090,15 +1090,15 @@ fob::fob( void ): m_error( true ), m_error_msg( "uninitialized" ),
 	m_group( false ), m_save( 0x00 ), m_sleep( 500000 ), 
 	m_min_error_level( fob::FATAL )
 {
+	//create mutex
+	pthread_mutex_init( &m_mutex, NULL );
+
 	//create streaming thread
 	if( pthread_create( &m_flock_thread, NULL, 
 		get_flock_data, this ) != 0 ) {
 		//could not create thread
 		set_error( "fob::fob: could not create download thread" );
 	}
-
-	//create mutex
-	pthread_mutex_init( &m_mutex, NULL );
 }
 
 

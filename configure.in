@@ -131,6 +131,11 @@ ACX_PTHREAD( have_pthread=yes, [
 	AC_MSG_ERROR([ pthread library not found!])
 ])
 
+AC_SUBST(CFLAGS)
+AC_SUBST(CXXFLAGS)
+AC_SUBST(LIBS)
+AC_SUBST(LDFLAGS)
+
 AC_OUTPUT([
 	Makefile
 	fob.doxygen

@@ -100,9 +100,9 @@ extern "C" {
  *     std::cout << "bird i: pos:     " << position << std::endl;
  *     std::cout << "bird i: quat:    " << orientation << std::endl;
  *     std::cout << "bird i: buttons: " 
- *       << ((buttons & fob::BUTTON_LEFT)   ? 1 | 0)
- *       << ((buttons & fob::BUTTON_MIDDLE) ? 1 | 0)
- *       << ((buttons & fob::BUTTON_LEFT)   ? 1 | 0) << std::endl;
+ *       << ((buttons == fob::BUTTON_LEFT)   ? 1 | 0)
+ *       << ((buttons == fob::BUTTON_MIDDLE) ? 1 | 0)
+ *       << ((buttons == fob::BUTTON_LEFT)   ? 1 | 0) << std::endl;
  *   }
  * }
  *

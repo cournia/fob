@@ -37,15 +37,20 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 const unsigned int MAX_ENTS = 14;
 
 void render_axis( float len );
+void render_buttons( bool x, bool y, bool z, float len );
 
 ///////////////////////////////////////////////////////////////////////////////
 struct cmd_args {
 	std::string serial;
 	unsigned long sleep_ms;
+	bool old;
+	fob::port_speed speed;
 
 	cmd_args( void ): 
 		serial( "/dev/ttyS0" ), 
-		sleep_ms( 500 )
+		sleep_ms( 500 ),
+		old( false ),
+		speed( fob::FAST )
 	{ }
 
 	bool parse( int argc, const char *argv[ ] );
@@ -62,6 +67,7 @@ cmd_args::parse( int argc, const char *argv[ ] )
 
 	//register flags/options
 	c.register_option( sleep_ms, "sleep", 's', "Time to sleep between commands (ms)", "MILLISECONDS" );
+	c.register_flag( old, "old", 'o', "Compensate for older flock firmware" );
 	c.register_argument( serial, "device", "Serial port flock is connected too" );
 
 	try {
@@ -70,6 +76,9 @@ cmd_args::parse( int argc, const char *argv[ ] )
 		std::cerr << "error: " << ex.what( ) << std::endl;
 		return false;
 	}
+
+	//check for old hardware
+	if( old ) speed = fob::SLOW;
 
 	//success
 	return true;
@@ -82,6 +91,7 @@ struct entity {
 	math::quaternion orientation;
 	math::vector3 position;
 	math::matrix4 matrix;
+	unsigned char buttons;
 
 	void render( void );
 };
@@ -103,6 +113,14 @@ entity::render( void )
 	//render the mesh
 	render_axis( 10 );
 
+	//render buttons
+	render_buttons( 
+		(buttons == fob::BUTTON_LEFT), 
+		(buttons == fob::BUTTON_MIDDLE), 
+		(buttons == fob::BUTTON_RIGHT), 
+		10 
+	);
+
 	//back to the old matrix
 	glPopMatrix( );
 }
@@ -116,6 +134,7 @@ camera cam;
 fob flock;
 unsigned int num_birds;
 fob::bird_list *p_birds;
+GLUquadricObj *sphere = 0;
 
 
 
@@ -140,6 +159,32 @@ render_axis( float len )
 		glVertex3f( 0.0, 0.0, len );
 		glVertex3f( 0.0, 0.0, 0.0 );
 	glEnd( );
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+void 
+render_buttons( bool x, bool y, bool z, float len )
+{
+	if( x ) {
+		glColor3f( 1.0, 0.0, 0.0 );
+		glTranslatef( len, 0.0, 0.0 );
+		gluSphere( sphere, len / 10.0, 7, 7 );
+		glTranslatef( -len, 0.0, 0.0 );
+	}
+	if( y ) {
+		glColor3f( 0.0, 1.0, 0.0 );
+		glTranslatef( 0.0, len, 0.0 );
+		gluSphere( sphere, len / 10.0, 7, 7 );
+		glTranslatef( 0.0, -len, 0.0 );
+	}
+	if( z ) {
+		glColor3f( 0.0, 0.0, 1.0 );
+		glTranslatef( 0.0, 0.0, len );
+		gluSphere( sphere, len / 10.0, 7, 7 );
+		glTranslatef( 0.0, 0.0, -len );
+	}
 }
 
 
@@ -190,6 +235,10 @@ handle_resize( int w, int h )
 void
 handle_exit( void )
 {
+	if( sphere ) {
+		gluDeleteQuadric( sphere );
+		sphere = 0;
+	}
 	flock.close( );
 }
 
@@ -217,6 +266,7 @@ render( void )
 			//(*p_birds)[ i ]->get_position( entities[ i ].position );
 			//(*p_birds)[ i ]->get_quaternion( entities[ i ].orientation );
 			(*p_birds)[ i ]->get_matrix( entities[ i ].matrix );
+			entities[ i ].buttons = (*p_birds)[ i ]->get_buttons( );
 		}
 #endif
 
@@ -257,7 +307,7 @@ main( int argc, char *argv[ ] )
 
 #if ENABLE_FBB
 	fob::hemisphere hemisphere = fob::DOWN;
-	fob::port_speed speed = fob::FAST;
+	fob::port_speed speed = args.speed;
 	
 	//talk to flock
 	flock.open( args.serial, hemisphere, speed, args.sleep_ms );
@@ -278,7 +328,7 @@ main( int argc, char *argv[ ] )
 #if ENABLE_FBB
 	//for each bird, set that we want position and orientation
 	for( unsigned int i = 0; i < birds.size( ); ++i ) {
-		if( !birds[ i ]->set_mode( fob::POSITION | fob::ORIENTATION ) ) {
+		if( !birds[ i ]->set_mode( fob::POSITION | fob::ORIENTATION | fob::BUTTONS ) ) {
 			std::cerr << "fatal: " << flock.get_error( ) << std::endl;
 			return 1;
 		}
@@ -297,6 +347,9 @@ main( int argc, char *argv[ ] )
 	//let the bird start up . . .
 	sleep( 1 );
 #endif
+
+	//create the button sphere
+	sphere = gluNewQuadric( );
 
 	//start glut
 	glutMainLoop( );
