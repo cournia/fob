@@ -286,11 +286,11 @@ fob::bird::update( unsigned char *buffer, int size )
 {
 	//do we have button data
 	int button_size = 0;
-	DEBUG( "fob::bird::update: buffer size: " << size );
+	//DEBUG( "fob::bird::update: buffer size: " << size );
 	lock_data( );
 	if( m_mode & fob::BUTTONS ) {
 		m_buttons = buffer[ size - 1 ];
-		DEBUG( "fob::bird::update: button read: " << (int)(m_buttons) );
+		//DEBUG( "fob::bird::update: button read: " << (int)(m_buttons) );
 		button_size = 1;
 	}
 	unlock_data( );
@@ -1311,8 +1311,8 @@ fob::update( void )
 	}
 	
 	//send buffer to bird (bird makes sure data is sane)
-	DEBUG( "fob::update: record address: " << address );
-	DEBUG( "fob::update: size: " << i - 1 << " save: " << (int)m_save );
+	//DEBUG( "fob::update: record address: " << address );
+	//DEBUG( "fob::update: size: " << i - 1 << " save: " << (int)m_save );
 	m_birds[ address ]->update( buffer, i - 1 );
 	
 	//success
