@@ -35,10 +35,6 @@ namespace math {
 	class vector3;
 }
 
-//////////////////////////////////////////////////////////////////////////
-math::vector3 operator* ( real_t lhs, const math::vector3& rhs );
-std::ostream& operator<< ( std::ostream& o, const math::vector3& vec );
-
 namespace math {
 	math::vector3 cross( const math::vector3& lhs, const math::vector3& rhs );
 	void add( math::vector3& dest, const math::vector3& lhs, const math::vector3& rhs );

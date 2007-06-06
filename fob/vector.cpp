@@ -33,7 +33,7 @@ const math::vector3 math::vector3::Z_AXIS( 0.0, 0.0, 1.0 );
 
 //////////////////////////////////////////////////////////////////////////
 math::vector3 
-operator* ( real_t lhs, const math::vector3& rhs )
+math::operator* ( real_t lhs, const math::vector3& rhs )
 {
 	return math::vector3( (rhs.m_data[ 0 ] * lhs), 
 		(rhs.m_data[ 1 ] * lhs),
@@ -43,7 +43,7 @@ operator* ( real_t lhs, const math::vector3& rhs )
 
 //////////////////////////////////////////////////////////////////////////
 std::ostream& 
-operator<< ( std::ostream& o, const math::vector3& vec )
+math::operator<< ( std::ostream& o, const math::vector3& vec )
 {
 	return o << vec.m_data[ 0 ] << " " << vec.m_data[ 1 ] 
 		<< " " << vec.m_data[ 2 ];

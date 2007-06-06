@@ -38,9 +38,6 @@ namespace math {
 	class matrix4;
 }
 
-math::vector3 operator* ( const math::vector3& v, const math::matrix4& m );
-std::ostream& operator<< ( std::ostream& o, const math::matrix4& m );
-
 //! A 4x4 matrix.
 /*! 
  * A 4x4 matrix in row major format:

@@ -36,8 +36,6 @@ namespace math {
 	class quaternion;
 }
 
-std::ostream& operator<< ( std::ostream& o, const math::quaternion& q );
-
 //!A quaternion.
 /*!
  * Quaternions take on the form:

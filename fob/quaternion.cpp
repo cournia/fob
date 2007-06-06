@@ -335,7 +335,7 @@ math::quaternion::slerp( real_t percent, const math::quaternion& qa,
 
 //////////////////////////////////////////////////////////////////////////
 std::ostream& 
-operator<< ( std::ostream& o, const math::quaternion& q )
+math::operator<< ( std::ostream& o, const math::quaternion& q )
 {
 	return o << q.m_v << " " << q.m_w;
 }

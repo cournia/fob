@@ -251,7 +251,7 @@ math::matrix4::transpose( void )
 
 //////////////////////////////////////////////////////////////////////////
 math::vector3
-operator* ( const math::vector3& v, const math::matrix4& m )
+math::operator* ( const math::vector3& v, const math::matrix4& m )
 {
 	math::vector3 res;
 	for( unsigned int i = 0; i < 3; ++i ) {
@@ -409,7 +409,7 @@ math::matrix4::from_matrix4( const real_t *mat )
 
 //////////////////////////////////////////////////////////////////////////
 std::ostream&
-operator<< ( std::ostream& o, const math::matrix4& m )
+math::operator<< ( std::ostream& o, const math::matrix4& m )
 {
 	for( unsigned int r = 0; r < 3; ++r ) {
 		o << std::setw( 5 ) << m.m_data[ r ][ 0 ] << " "
