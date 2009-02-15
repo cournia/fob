@@ -47,7 +47,7 @@ namespace math {
 inline double
 rand01( void ) 
 {
-	return (rand( ) / (double)RAND_MAX);
+    return (rand( ) / (double)RAND_MAX);
 }
 
 //!Converts radians to degrees.
@@ -58,7 +58,7 @@ rand01( void )
 inline double
 to_degrees( double x )
 {
-	return (x * 180.0 / M_PI);
+    return (x * 180.0 / M_PI);
 }
 
 //!Converts degrees to radians.
@@ -69,7 +69,7 @@ to_degrees( double x )
 inline double
 to_radians( double x )
 {
-	return (x * M_PI / 180.0);
+    return (x * M_PI / 180.0);
 }
 
 //!Precision aware equals.
@@ -80,7 +80,7 @@ to_radians( double x )
 inline bool
 equals( double x, double y ) 
 {
-	return (std::fabs( x - y ) < MATH_EPSILON);
+    return (std::fabs( x - y ) < MATH_EPSILON);
 }
 
 //!Swaps \a x and \a y.
@@ -96,9 +96,9 @@ template <class T>
 inline void
 swap( T& x, T& y )
 {
-	T z = x;
-	x = y;
-	y = z;
+    T z = x;
+    x = y;
+    y = z;
 }
 
 //!Finds the sign of \a x.
@@ -108,11 +108,11 @@ swap( T& x, T& y )
 inline double
 sign( double x )
 {
-	if( x < 0.0 ) {
-		return -1.0;
-	} else {
-		return 1.0;
-	}
+    if( x < 0.0 ) {
+        return -1.0;
+    } else {
+        return 1.0;
+    }
 }
 
 //!Checks if \a x and \a y share the same sign.
@@ -122,11 +122,11 @@ sign( double x )
 inline bool
 same_sign( double x, double y )
 {
-	if( x * y >= 0.0 ) {
-		return true;
-	} else {
-		return false;
-	}
+    if( x * y >= 0.0 ) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 //!Check if \a x is negative.
@@ -136,11 +136,11 @@ same_sign( double x, double y )
 inline bool
 negative( double x )
 {
-	if( x < 0.0 ) {
-		return true;
-	} else {
-		return false;
-	}
+    if( x < 0.0 ) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 //!Check if \a x is positive.
@@ -150,11 +150,11 @@ negative( double x )
 inline bool
 positive( double x )
 {
-	if( x < 0.0 ) {
-		return false;
-	} else {
-		return true;
-	}
+    if( x < 0.0 ) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 //! Returns a normalized angle [0,360).
@@ -164,25 +164,25 @@ positive( double x )
 inline float
 angle_normalize_360( float angle )
 {
-	return (360.0 / 65536) * ((int)(angle * (65536 / 360.0)) & 65535);
+    return (360.0 / 65536) * ((int)(angle * (65536 / 360.0)) & 65535);
 }
 
 //! Returns a normalized angle (-180,180].
 inline float
 angle_normalize_180( float angle )
 {
-	angle = angle_normalize_360( angle );
-	if( angle > 180.0 ) {
-		angle -= 360.0;
-	}
-	return angle;
+    angle = angle_normalize_360( angle );
+    if( angle > 180.0 ) {
+        angle -= 360.0;
+    }
+    return angle;
 }
 
 //! Returns the difference of 2 angles.  Result is in the range (-180,180]
 inline float
 angle_subtract( float a, float b )
 {
-	return angle_normalize_180( a - b );
+    return angle_normalize_180( a - b );
 }
 
 
@@ -197,18 +197,18 @@ template <class T>
 inline T 
 clamp( T value, T min, T max )
 {
-	if( value < min ) {
-		//value less, clamp
-		return min;
-	}
+    if( value < min ) {
+        //value less, clamp
+        return min;
+    }
 
-	if( value > max ) {
-		//value greater, clamp
-		return max;
-	}
+    if( value > max ) {
+        //value greater, clamp
+        return max;
+    }
 
-	//value ok
-	return value;
+    //value ok
+    return value;
 }
 
 } //end of namespace math

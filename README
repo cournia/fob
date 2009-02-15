@@ -1,4 +1,4 @@
-- Flock of Birds Library 1.0.2
+- Flock of Birds Library 1.0.3
 
 ==============
 Installing the library should be as easy as:
@@ -47,6 +47,7 @@ html and tex based documentation.
 
 
 ==============
-Please send any comments/suggestions/threats to Nathan Cournia at:
+Please send any comments, suggestions, code submissions to the
+developer mailing list:
 
-nathan@cournia.com
+fob-devel@lists.sourceforge.net
