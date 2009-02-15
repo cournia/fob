@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #ifndef COURNIA_FOB_H
 #define COURNIA_FOB_H 1
 
+#include <cstring>
 #include <vector>
 #include <string>
 #include <cstdarg>
@@ -252,7 +253,7 @@ public:
 		//! Gets the bird's position.
 		inline void get_position( real_t output[ 3 ] ) const {
 			lock_data( );
-			memcpy( output, static_cast<const real_t*>( m_position ), sizeof( real_t ) * 3 );
+			std::memcpy( output, static_cast<const real_t*>( m_position ), sizeof( real_t ) * 3 );
 			unlock_data( );
 		}
 
@@ -278,7 +279,7 @@ public:
 			if( m_ori_dirty ) {
 				update_orientation( );
 			}
-			memcpy( output, static_cast<const real_t*>( m_angles ), sizeof( real_t ) * 3 );
+			std::memcpy( output, static_cast<const real_t*>( m_angles ), sizeof( real_t ) * 3 );
 			unlock_data( );
 		}
 
@@ -301,7 +302,7 @@ public:
 			if( m_ori_dirty ) {
 				update_orientation( );
 			}
-			memcpy( output, static_cast<const real_t*>( m_quaternion.vec( ) ), sizeof( real_t ) * 3 );
+			std::memcpy( output, static_cast<const real_t*>( m_quaternion.vec( ) ), sizeof( real_t ) * 3 );
 			output[ 3 ] = m_quaternion.w( );
 			unlock_data( );
 		}
@@ -328,7 +329,7 @@ public:
 			if( m_ori_dirty ) {
 				update_orientation( );
 			}
-			memcpy( output, static_cast<const real_t*>( m_matrix ), sizeof( real_t ) * 16 );
+			std::memcpy( output, static_cast<const real_t*>( m_matrix ), sizeof( real_t ) * 16 );
 			unlock_data( );
 		}
 		

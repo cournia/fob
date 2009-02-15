@@ -44,6 +44,8 @@ namespace math {
 	void multiply( math::vector3& dest, const math::vector3& lhs, real_t rhs );
 	void multiply( math::vector3& dest, real_t rhs, const math::vector3& lhs );
 	real_t dot( const math::vector3& lhs, const math::vector3& rhs ); 
+	math::vector3 operator* ( real_t lhs, const math::vector3& rhs );
+	std::ostream& operator<< ( std::ostream& o, const math::vector3& vec );
 }
 
 //!A 3-dimensional vector.

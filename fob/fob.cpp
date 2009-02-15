@@ -36,8 +36,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <sys/ioctl.h>
 #include "fob/fob.h"
 
-#define DEBUG(x) (std::cerr << x << std::endl)
-//#define DEBUG(x)
+//#define DEBUG(x) (std::cerr << x << std::endl)
+#define DEBUG(x)
 
 const fob::mode fob::POSITION = 0x01;
 const fob::mode fob::ORIENTATION = 0x02;
@@ -464,7 +464,7 @@ fob::set_rts( bool high )
 	int status;
 	if( ioctl( m_device, TIOCMGET, &status ) < 0 ) {
 		set_error( "fob::set_rts: could not read RTS: %s", 
-			strerror( errno ) );
+			std::strerror( errno ) );
 		return false;
 	}
 
@@ -484,7 +484,7 @@ fob::set_rts( bool high )
 	status ^= TIOCM_RTS;
 	if( ioctl( m_device, TIOCMSET, &status ) < 0 ) {
 		set_error( "fob::set_rts: could not set RTS: %s", 
-			strerror( errno ) );
+			std::strerror( errno ) );
 		return false;
 	}
 
@@ -691,7 +691,7 @@ fob::examine( fob::examine_option param, unsigned char *output )
 	if( reply < 0 ) {
 		//write error
 		set_error( "fob::examine: could not recv examine reply: %s", 
-			strerror( errno ) );
+			std::strerror( errno ) );
 		return false;
 	} else if( reply < param.reply_bytes ) {
 		//not enough data
@@ -1162,13 +1162,13 @@ fob::open( const std::string& device_name,
 	DEBUG( "fob::open: dev: '" << device_name << "'" );
 	m_device = ::open( device_name.c_str( ), O_RDWR );
 	if( m_device < 0 ) {
-		set_error( "fob::open: %s", strerror( errno ) );
+		set_error( "fob::open: %s", std::strerror( errno ) );
 		return *this;
 	}
 
 	//save old serial port settings
 	if( tcgetattr( m_device, &m_save_tio ) < 0 ) {
-		set_error( "fob::open: %s", strerror( errno ) );
+		set_error( "fob::open: %s", std::strerror( errno ) );
 		return *this;
 	}
 
@@ -1204,7 +1204,7 @@ fob::open( const std::string& device_name,
 	//tell the os the serial port settings we want
 	tcflush( m_device, TCIFLUSH );
 	if( tcsetattr( m_device, TCSANOW, &settings ) < 0 ) {
-		set_error( "fob::open: %s", strerror( errno ) );
+		set_error( "fob::open: %s", std::strerror( errno ) );
 		return *this;
 	}
 	
@@ -1291,13 +1291,13 @@ fob::close( void )
 	
 	//set the serial port settings to their old values
 	if( tcsetattr( m_device, TCSANOW, &m_save_tio ) < 0 ) {
-		set_error( "fob::close: %s", strerror( errno ) );
+		set_error( "fob::close: %s", std::strerror( errno ) );
 		return false;
 	}
 	
 	//close the fob serial device
 	if( ::close( m_device ) < 0 ) {
-		set_error( "fob::close: %s", strerror( errno ) );
+		set_error( "fob::close: %s", std::strerror( errno ) );
 		return false;
 	}
 
