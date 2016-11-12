@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #ifndef COURNIA_FOB_H
 #define COURNIA_FOB_H 1
 
+#include <cstdio>
 #include <cstring>
 #include <vector>
 #include <string>
