@@ -30,3 +30,4 @@ test/*.o
 test/fly
 test/fly2
 api/*
+.gitattributes
