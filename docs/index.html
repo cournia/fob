@@ -1,0 +1,251 @@
+<html>
+<head>
+	<title>Ascension Flock of Birds Library</title>
+	<link type="text/css" href="fob.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div id="main">
+	<h1>Ascension Flock of Birds Library</h1>
+	<div id="toc">
+		<a href="http://sourceforge.net/projects/fob/">Project</a> |
+		<a href="#docs">Documentation</a> |
+		<a href="#dl">Download</a> |
+		<a href="http://fob.cvs.sourceforge.net/viewvc/fob/">CVS</a> |
+		<a href="#support">Support</a>
+	</div>
+
+
+<h2>Introduction</h2>
+<p class="text"><b>libfob</b> is a C++ interface to 
+<a href="http://www.ascension-tech.com/">Ascension Technology Corporation</a>'s
+Flock of Birds position and orientation measurement system.
+
+
+<p class="text"><h2>Overview</h2>
+<p class="text"><b>libfob</b> provides an interface to the Flock of Birds hardware.
+Tedious and error prone tasks such as configuring the flock's data mode,
+sending commands to the flock, and decoding the data received from the
+flock are all hidden behind <b>libfob</b>'s interface.
+
+<p class="text">Programming the flock hardware can be hard.  The programmer has
+to worry about in which format the flock returns data (pos/quat, quat,
+mat, pos, angles, pos/angles, etc.)  Configuring the flock is
+error prone and hard to get correct.  For older version of the Flock
+of Birds hardware, simply starting the flock can be a chore.
+
+<p class="text">In contrast, <b>libfob</b> has been designed to be easy to use.  
+The programmer simply tells the library the following:
+
+<ul>
+	<li>Serial port the flock is attached to (ex: "/dev/ttyS0").
+	<li>Hemisphere the flock should operate in (ex: "DOWN").
+	<li>Maximum speed the flock can operate ("FAST" for newer flock hardware
+	"SLOW" for older hardware).
+</ul>
+
+<p class="text">The programmer can then configure the flock on a per bird basis.  Any
+combination of the following information can be retrieved from a bird
+in the flock:
+
+<ul>
+	<li>Position</li>
+	<li>Orientation</li>
+	<li>Buttons</li>
+</ul>
+
+<p class="text">At any time, the programmer can retrieve the above information in any 
+of the following formats:
+
+<ul>
+	<li>Quaternion (represents orientation)
+	<li>Vector (represent position)
+	<li>4x4 Matrix (represents position/orientation)
+</ul>
+
+<p class="text">The programmer pays no penalty for retrieving 
+data in one format over another.  Internally <b>libfob</b>
+configures the flock's hardware to send data as fast as possible.
+<b>libfob</b> maintains multiple representations of the
+data for fast retrieval by the programmer.
+
+<p class="text"><b>libfob</b> also provides facilities to correct 
+orientation information for incorrectly installed bird
+sensors.
+
+<p class="text">The orientation returned by the flock's hardware are usually returned
+by the reference frame represented in figure 1.
+
+<p class="text"><img src="images/fob-ref.jpg">
+
+<p class="text">However, <b>libfob</b> returns orientation information in
+relation to the reference frame given in figure 2.  This is the same
+reference frame used by OpenGL.
+
+<p class="text"><img src="images/fob-gl.jpg">
+
+<!-- docs -->
+<p class="text"><h2>Example</h2>
+<p class="text">Below is a small example on how to use <b>libfob</b>.
+For more in-depth information on how to use the library,
+consult the <a href="api/html/index.html">API</a> documentation.
+
+<p class="text"><table><tr><td>
+
+<!-- begin vim code -->
+
+<pre>
+<font color="#0000ff">// open the flock of birds on serial port 0</font>
+<font color="#0000ff">// </font>
+<font color="#0000ff">// the sensor is installed in the ceiling so,</font>
+<font color="#0000ff">// tell the flock that all birds will operate in the DOWN</font>
+<font color="#0000ff">// hemisphere</font>
+<font color="#0000ff">//</font>
+<font color="#0000ff">// we have a fairly new version of the fob hardware, so</font>
+<font color="#0000ff">// run it at a high baud rate</font>
+fob flock( <font color="#ff00ff">&quot;/dev/ttyS0&quot;</font><span class="c0">, fob::DOWN, fob::FAST );</span>
+<font color="#a52a2a"><b>if</b></font>( !flock ) {
+  std::cerr &lt;&lt; <font color="#ff00ff">&quot;fatal: &quot;</font><span class="c0"> &lt;&lt; flock.get_error( ) &lt;&lt; std::endl;</span>
+  <font color="#a52a2a"><b>return</b></font><span class="c0"> </span><font color="#ff00ff">1</font><span class="c0">;</span>
+}
+
+<font color="#0000ff">//get a list of birds connected to the flock</font>
+fob::bird_list&amp; birds = flock.get_birds( );
+
+<font color="#0000ff">//report how many birds are present</font>
+std::cout &lt;&lt; <font color="#ff00ff">&quot;number of birds: &quot;</font><span class="c0"> &lt;&lt; birds.size( ) &lt;&lt; std::endl;</span>
+
+<font color="#0000ff">//for each bird, set that we want position and orientation information</font>
+<font color="#a52a2a"><b>for</b></font>( <font color="#2e8b57"><b>unsigned</b></font><span class="c0"> </span><span class="c34">int</span><span class="c0"> i = </span><font color="#ff00ff">0</font><span class="c0">; i &lt; birds.size( ); ++i ) {</span>
+  <font color="#a52a2a"><b>if</b></font><span class="c0">( !birds[ i ]-&gt;set_mode( fob::POSITION | fob::ORIENTATION ) ) {</span>
+    std::cerr &lt;&lt; <font color="#ff00ff">&quot;fatal: &quot;</font><span class="c0"> &lt;&lt; flock.get_error( ) &lt;&lt; std::endl;</span>
+    <font color="#a52a2a"><b>return</b></font><span class="c0"> </span><font color="#ff00ff">1</font><span class="c0">;</span>
+  }
+}
+<font color="#0000ff">//birds configured, set the flock flying</font>
+flock.fly( );
+
+<font color="#0000ff">//let the bird start up . . .</font>
+sleep( <font color="#ff00ff">1</font><span class="c0"> );</span>
+
+<font color="#0000ff">//report position and orientation for each bird</font>
+<font color="#2e8b57"><b>float</b></font> pos[ <font color="#ff00ff">3</font><span class="c0"> ];</span>
+<font color="#2e8b57"><b>float</b></font> quat[ <font color="#ff00ff">4</font><span class="c0"> ];</span>
+
+<font color="#a52a2a"><b>while</b></font>( <font color="#ff00ff">1</font><span class="c0"> ) {</span>
+  <font color="#a52a2a"><b>for</b></font><span class="c0">( </span><font color="#2e8b57"><b>unsigned</b></font><span class="c0"> </span><span class="c34">int</span><span class="c0"> i = </span><font color="#ff00ff">0</font><span class="c0">; i &lt; num_birds; ++i ) {</span>
+    <font color="#0000ff">//get position and orientation information from the bird</font>
+    birds[ i ]-&gt;get_position( pos );
+    birds[ i ]-&gt;get_quaternion( quat );
+
+    <font color="#0000ff">//report</font>
+    std::cout &lt;&lt; i
+      &lt;&lt; <font color="#ff00ff">&quot;: p: &quot;</font><span class="c0"> </span>
+      &lt;&lt; pos[ <font color="#ff00ff">0</font><span class="c0"> ] &lt;&lt; </span><span class="c29">&quot; &quot;</span><span class="c0"> &lt;&lt; pos[ </span><span class="c29">1</span><span class="c0"> ] &lt;&lt; </span><span class="c29">&quot; &quot;</span><span class="c0"> &lt;&lt; pos[ </span><span class="c29">2</span><span class="c0"> ]</span>
+      &lt;&lt; <font color="#ff00ff">&quot; q: &quot;</font>
+      &lt;&lt; quat[ <font color="#ff00ff">0</font><span class="c0"> ] &lt;&lt; </span><span class="c29">&quot; &quot;</span><span class="c0"> &lt;&lt; quat[ </span><span class="c29">1</span><span class="c0"> ] &lt;&lt; </span><span class="c29">&quot; &quot;</span><span class="c0"> &lt;&lt; quat[ </span><span class="c29">2</span><span class="c0"> ] &lt;&lt; quat[ </span><span class="c29">3</span><span class="c0"> ]</span>
+      &lt;&lt; std::endl;
+  }
+}
+</pre>
+
+<!-- end vim code -->
+
+</td></tr></table>
+
+
+
+<!-- docs -->
+<a name="docs"></a>
+<p class="text"><h2>Documentation</h2>
+<p class="text"> API documentation can be found <a href="api/html/index.html">here</a>.
+You can also find Ascension's Flock of Bird's 
+installation/programmer manual <a href="http://www.ascension-tech.com/support/downloads.php">here</a>.
+<p class="text"><a href="clemson.html">Here</a> you can find
+an example of a hardware configuration that is know to work with
+<b>libfob</b>.
+
+
+
+<!-- hardware -->
+<p class="text"><h2>Supported Hardware</h2>
+<p class="text"><b>libfob</b> is capable of running with one/multiple 
+transmitters/receivers.  The library has been tested using 
+the flock's RS232 serial interface.  The RS422/485 interfaces are 
+untested.  The flock is assumed to be in "normal" addressing mode
+(as opposed to "expanded" or "super-expanded").
+
+<p class="text">If pin 7 of the RS232 capable is attached, then <b>libfob</b>
+is capable of performing a hardware reset of the flock.  This
+is very important since it is fairly easy to put 
+older version of flock hardware into an error state.
+
+
+
+<!-- platforms -->
+<p class="text"><h2>Supported Platforms</h2>
+<p class="text"><b>libfob</b> is known to work on the following platforms:
+
+<ul>
+	<li>Linux
+	<li>Cygwin (you must install m4 in order to run the configure script)
+</ul>
+
+<p class="text"><b>libfob</b> should work on any UNIX platform.  However, only
+the Linux platform has been tested.  If you have successfully
+built and used <b>libfob</b> on a non-Linux platform, please
+e-mail the <a href="mailto:fob-devel@lists.sourceforge.net">developer mailing list</a>.
+
+<p class="text">Internally <b>libfob</b> uses POSIX <b>pthread</b>s and UNIX's
+<b>termios</b> serial interface.  Alternatives to the above libraries
+will have to be found when porting <b>libfob</b> to any non-UNIX
+platform.
+
+
+
+<!-- todo -->
+<p class="text"><h2>TODO</h2>
+<p class="text">
+<ul>
+	<li>Port to WIN32 (native, Cygwin already works)
+</ul>
+
+
+
+
+<a name="dl"></a>
+<p class="text"><h2>Download</h2>
+<p class="text">The latest verion of <b>libfob</b> can be found at 
+<a href="http://sourceforge.net/project/showfiles.php?group_id=86432">Source Forge</a>.
+<p class="text">You can also retrieve the library via <a href="http://sourceforge.net/cvs/?group_id=86432">CVS</a>.
+
+
+<a name="support"></a>
+<h2>Support</h2>
+<p class="text">
+Feel free to join our developer mailing list (<b>very</b> low traffic): 
+<a href="https://lists.sourceforge.net/lists/listinfo/fob-devel"><b>fob-devel</b> Subscription Manager</a>.
+
+<p class="text">
+Please send all comments, complaints, code submission, support requests, etc to the
+<a href="mailto:fob-devel@lists.sourceforge.net">developer mailing list</a>.
+
+<p class="text">
+For a list of know issues, check <b>libfob</b>'s <a href="https://sourceforge.net/tracker2/?group_id=86432&atid=579607">bug tracker</a>.
+
+<p class="text">
+You can also contact the primary developer <a href="mailto:nathan@cournia.com">Nathan Cournia</a>, although contacting the 
+<a href="mailto:fob-devel@lists.sourceforge.net">developer mailing list</a> is preferred.
+
+<p class="text"><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=86432&amp;type=1" width="88" height="31" border="0" alt="SourceForge.net Logo" /></a>
+
+<div id="footer">
+2009 &copy; <a href="mailto:nathan@cournia.com">Nathan Cournia</a>
+</div>
+
+</div>
+
+</body>
+
+</html>
