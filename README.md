@@ -47,6 +47,9 @@ the operation of the flock once the "fly( )" has been called.
 
 
 ### Documentation
+
+Wiki docs can be found at https://github.com/cournia/fob/wiki.
+
 API documentation can be generated via Doxygen:
 
     make docs
