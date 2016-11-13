@@ -1,24 +1,25 @@
-- Flock of Birds Library 1.0.3
+## Flock of Birds Library
 
-==============
+### Installation
+
 To install/build the library, first determine if you must
 boostrap the project.  If the 'configure' script does not
 exist, run:
 
-./bootstrap
+    ./bootstrap
 
 You should only have to run 'bootstrap' once.
 
 Installing the library should be as easy as:
 
-./configure
-make install
+    ./configure
+    make install
 
 You'll probably also want to build the test programs to make sure
 everything is working:
 
-cd test
-make
+    cd test
+    make
 
 This will generate two test programs: "fly" and "fly2".  "fly" simply
 outputs received data from the flock to stderr.  "fly2" is an OpenGL
@@ -32,7 +33,7 @@ between commands.  This is very conservative and a bit slow.  A good
 way to find the best wait time for your particular setup is to use
 the test program "fly2":
 
-./fly2 -s 250 /dev/ttyS0
+    ./fly2 -s 250 /dev/ttyS0
 
 The above command tells the library to wait 250ms between sending 
 commands to the flock hardware.  To find the optimal wait time, keep 
@@ -45,17 +46,16 @@ the amount of time it takes to start up the flock.  It does not affect
 the operation of the flock once the "fly( )" has been called.
 
 
-==============
+### Documentation
 API documentation can be generated via Doxygen:
 
-make docs
+    make docs
 
 This should create a directory named "api" in which you'll find both
 html and tex based documentation.
 
 
-==============
-Please send any comments, suggestions, code submissions to the
-developer mailing list:
+### Feedback
 
-fob-devel@lists.sourceforge.net
+Please send any comments, suggestions, code submissions to the
+Nathan Cournia <nathan@cournia.com>.
