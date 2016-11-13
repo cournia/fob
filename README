@@ -1,6 +1,14 @@
 - Flock of Birds Library 1.0.3
 
 ==============
+To install/build the library, first determine if you must
+boostrap the project.  If the 'configure' script does not
+exist, run:
+
+./bootstrap
+
+You should only have to run 'bootstrap' once.
+
 Installing the library should be as easy as:
 
 ./configure
