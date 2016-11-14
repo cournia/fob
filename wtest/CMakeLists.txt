@@ -1,0 +1,43 @@
+source_group( \\ FILES CMakeLists.txt )
+
+set(WTEST_PUBLIC_HEADERS
+	auxiliar.h
+	BOX.h
+)
+
+
+
+set(WTEST_SOURCES
+	auxiliar.cpp
+	SerialConnection.cpp
+)
+
+
+
+
+
+set(WTEST_LINK_LIBRARIES PUBLIC
+	${PTHREAD_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${GLEW_LIBRARIES}
+	${GLUT_LIBRARIES}
+	${FREEIMAGE_LIBRARIES}
+	${GLEW_LIBRARIES}
+)
+
+add_executable(WTEST ${WTEST_SOURCES} ${WTEST_SOURCES} )
+
+target_include_directories(WTEST PUBLIC
+	${FOB_INCLUDE_DIR}
+	${FREEIMAGE_INCLUDE_DIRS}
+	${ASSIMP_INCLUDE_DIR}
+    ${GLEW_INCLUDE_DIRS}
+    ${GLM_INCLUDE_DIR}
+	${PTHREAD_INCLUDE_DIR}
+)
+target_link_libraries(WTEST PUBLIC
+	FOB
+	${WTEST_LINK_LIBRARIES}
+
+)
+
