@@ -62,3 +62,6 @@ html and tex based documentation.
 
 Please send any comments, suggestions, code submissions to the
 Nathan Cournia <nathan@cournia.com>.
+
+Windows version:
+Aaron Sujar <aaronsujar@gmail.com>
