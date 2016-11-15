@@ -203,6 +203,7 @@ public:
             m_mode = cpy.m_mode;
             m_buttons = cpy.m_buttons;
             m_ori_dirty = cpy.m_ori_dirty;
+			m_rotation = glm::quat(1, glm::vec3(0));
 
             //unlock data
             cpy.unlock_data( );
@@ -235,6 +236,7 @@ public:
             m_mode = rhs.m_mode;
             m_buttons = rhs.m_buttons;
             m_ori_dirty = rhs.m_ori_dirty;
+			m_rotation = glm::quat(1, glm::vec3(0));
 
             //unlock data
             rhs.unlock_data( );

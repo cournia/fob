@@ -33,9 +33,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cassert>
 #include <fcntl.h>
 
-#include "wfob.h"
-#include "rs232.h"
+#include "fob.h"
+#include "../rs232.h"
 
+
+#include "glm/gtx/string_cast.hpp"
 #define DEBUG(x) (std::cout<< x << std::endl)
 //#define DEBUG(x)
 
@@ -286,12 +288,13 @@ fob::bird::unpack_pos_angle( unsigned char *buffer, int size )
     
     //note that bird sends z, y, x
     //map x, y, z from birds to -y, -z, x
+	
 	m_fob_angles = glm::vec3(
         static_cast<float>( -unpacked[ 4 ] ) * ANGLE_SCALE,
         static_cast<float>( -unpacked[ 3 ] ) * ANGLE_SCALE,
         static_cast<float>( unpacked[ 5 ] ) * ANGLE_SCALE
     );
-
+	
     m_ori_dirty = true;
 
     //let the user have fun
@@ -421,12 +424,14 @@ fob::bird::update( unsigned char *buffer, int size )
 void 
 fob::bird::update_orientation( void )
 {
-	
+	m_matrix = glm::mat4(1);
+
+	/*std::cout << glm::to_string(m_fob_angles) << std::endl;
     //apply x and y rotation
     glm::quat tmp(1,glm::vec3(0));
-    m_quaternion = glm::rotate(m_quaternion, glm::radians( m_fob_angles.x ),
+	m_quaternion = glm::rotate(glm::quat(1, glm::vec3(0)), glm::radians(m_fob_angles.x),
         glm::vec3(1,0,0) );
-	tmp = glm::rotate( tmp,glm::radians(m_fob_angles.y),
+	tmp = glm::rotate(glm::quat(1, glm::vec3(0)), glm::radians(m_fob_angles.y),
         glm::vec3(0,1,0));
     m_quaternion =  tmp * m_quaternion;
 	m_quaternion = glm::normalize(m_quaternion);
@@ -445,12 +450,14 @@ fob::bird::update_orientation( void )
     
     //rotate by the correction rotation (for bad sensor installations)
     m_quaternion =  m_quaternion * m_rotation;
-	m_quaternion = glm::normalize(m_quaternion);
+	m_quaternion = glm::normalize(m_quaternion);*/
+
+	//m_quaternion = glm::normalize(glm::quat(m_fob_angles));
 
     //FIXME m_angles should contain the angles with m_rotation
     //      applied 
     m_angles = m_fob_angles;
-
+	
     //update matrix
 	m_matrix = glm::mat4_cast(m_quaternion);
     //.get_rotation_matrix(  );
