@@ -33,8 +33,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cassert>
 #include <fcntl.h>
 
-#include "fob.h"
-#include "../rs232.h"
+#include "wfob.h"
+#include "rs232.h"
 
 
 #include "glm/gtx/string_cast.hpp"

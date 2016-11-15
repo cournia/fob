@@ -28,7 +28,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
-#include "fob.h"
+#include "wfob.h"
 fob flock;
 
 void renderObj();
@@ -163,7 +163,7 @@ int  n,
 cport_nr = 0,        /* /dev/ttyS0 (COM1 on windows) */
 bdrate = 115200;       /* 9600 baud */
 fob::bird_list birds;
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])
 {
 	
 
@@ -236,7 +236,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	initContext(argc, NULL);
 	initOGL();
-	initShader("../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag");
+	initShader("./shader.v1.vert", "./shader.v1.frag");
 	initObj();
 
 	glutMainLoop();
@@ -303,8 +303,8 @@ void initOGL(){
 	view = glm::mat4(1.0f);
 	view[3].z = -25;
 
-	colorTexId = loadTex("../img/color2.png");
-	emiTexId = loadTex("../img/emissive.png");
+	colorTexId = loadTex("./color2.png");
+	emiTexId = loadTex("./emissive.png");
 }
 void destroy(){
 	glDetachShader(program, vshader);
