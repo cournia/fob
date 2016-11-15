@@ -36,7 +36,6 @@ else()
 
 	set(FOB_SOURCES
 		fob.cpp
-		mathematics.cpp
 		matrix.cpp
 		quaternion.cpp
 		vector.cpp
@@ -46,6 +45,7 @@ else()
 
 endif(WIN32)
 
+include_directories(${PROJECT_SOURCE_DIR})
 
 add_library(FOB ${FOB_HEADERS} ${FOB_SOURCES})
 

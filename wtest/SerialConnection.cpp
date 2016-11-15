@@ -5,31 +5,30 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef _WIN32
-#include <Windows.h>
+#ifdef WIN32
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif
 
-#include "rs232.h"
+#include <fob/rs232.h>
 
 #include "BOX.h"
 #include "auxiliar.h"
 
-#include <windows.h>
 
-#include <gl/glew.h>
-#include <gl/gl.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
 #define SOLVE_FGLUT_WARNING
-#include <gl/freeglut.h> 
+#include <GL/freeglut.h> 
 #include <iostream>
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
-#include "fob.h"
-fob flock;
+#include <fob/fob.h>
+fob flockofbirds;
 
 void renderObj();
 void renderObj2();
@@ -157,6 +156,9 @@ static glm::vec3 unpack_pos(unsigned char *buffer, int size)
 	return m_position;
 }*/
 
+#ifndef WIN32
+typedef char _TCHAR;
+#endif
 
 
 int  n,
@@ -198,16 +200,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	fob::hemisphere hemisphere = fob::DOWN;
 
 	//talk to flock
-	flock.open("FOB", hemisphere);
-	if (!flock) {
+	flockofbirds.open("FOB", hemisphere);
+	if (!flockofbirds) {
 		
-		std::cerr << "fatal: " << flock.get_error() << std::endl;
-		flock.close();
+		std::cerr << "fatal: " << flockofbirds.get_error() << std::endl;
+		flockofbirds.close();
 		return 1;
 	}
 
 	//get a list of birds connected to the machine
-	birds = flock.get_birds();
+	birds = flockofbirds.get_birds();
 
 	//report how many birds are present
 	std::cout << "number of birds: " << birds.size() << std::endl;
@@ -215,14 +217,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	//for each bird, set that we want position and button information
 	for (unsigned int i = 0; i < birds.size(); ++i) {
 		if (!birds[i]->set_mode(fob::POSITION |fob::ORIENTATION)) {
-			std::cerr << "fatal: " << flock.get_error() << std::endl;
-			flock.close();
+			std::cerr << "fatal: " << flockofbirds.get_error() << std::endl;
+			flockofbirds.close();
 			return 1;
 		}
 	}
 
 	//birds configured, set the flock flying
-	flock.fly();
+	flockofbirds.fly();
 
 
 	
@@ -241,7 +243,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	glutMainLoop();
 
-	flock.close();
+	flockofbirds.close();
 	destroy();
 	
 
@@ -488,7 +490,7 @@ void renderFunc(){
 	//pintado del  objeto!!!!
 	renderObj();
 	renderObj2();
-	glUseProgram(NULL);
+	glUseProgram(0);
 
 
 	glutSwapBuffers();
