@@ -1,6 +1,9 @@
+
 #include "BOX.h"
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 #include <fstream>
 
@@ -22,7 +25,7 @@ char *loadStringFromFile(const char *fileName, unsigned int &fileLen)
 
 	//Se calcula la longitud del fichero
 	file.seekg(0, std::ios::end);
-	fileLen = unsigned int(file.tellg());
+	fileLen = (unsigned int )file.tellg();
 	file.seekg(std::ios::beg);
 
 	//Se lee el fichero
