@@ -25,12 +25,16 @@ set( VERSION_ABI 1 )
 set( FOB_DESCRIPTION "libfob is a C++ interface to Ascension Technology Corporation's Flock of Birds position and orientation measurement system." )
 set( COMMON_PROJECT_DOMAIN https://github.com/cournia/fob )
 
+if (MSVC)
+  add_definitions(-DWIN32 -D_WIN32)
+endif()
 
+find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 find_package(FreeImage REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(GLM REQUIRED)
-find_package(PTHREAD REQUIRED)
+find_package(Threads REQUIRED)
 
 add_subdirectory( fob )
 add_subdirectory( test )
