@@ -28,7 +28,7 @@ set(WTEST_LINK_LIBRARIES PUBLIC
 add_executable(WTEST ${WTEST_SOURCES} ${WTEST_SOURCES} )
 
 target_include_directories(WTEST PUBLIC
-	FOB
+	fob
 	${FREEIMAGE_INCLUDE_DIRS}
 	${ASSIMP_INCLUDE_DIR}
     ${GLEW_INCLUDE_DIRS}
@@ -36,7 +36,7 @@ target_include_directories(WTEST PUBLIC
 	${PTHREAD_INCLUDE_DIR}
 )
 target_link_libraries(WTEST PUBLIC
-	FOB
+	fob
 	${WTEST_LINK_LIBRARIES}
 
 )

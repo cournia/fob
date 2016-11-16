@@ -47,13 +47,15 @@ else()
 endif(WIN32)
 
 
-add_library(FOB ${FOB_HEADERS} ${FOB_SOURCES})
 
-target_include_directories(FOB PUBLIC
+add_library(fob ${FOB_HEADERS} ${FOB_SOURCES})
+
+target_include_directories(fob PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
 	${GLM_INCLUDE_DIR}
 	${PTHREAD_INCLUDE_DIR}
 )
 
-target_link_libraries(FOB
+target_link_libraries(fob
 	${FOB_LINK_LIBRARIES}
 )
