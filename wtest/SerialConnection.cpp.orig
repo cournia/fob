@@ -27,8 +27,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
-#include <fob/wfob.h>
+<<<<<<< HEAD
+#include "wfob.h"
+fob flock;
+=======
+#include <fob/fob.h>
 fob flockofbirds;
+>>>>>>> 4bf72cbebc37608e89d0f3fc1024549a125ca36a
 
 void renderObj();
 void renderObj2();
@@ -718,8 +723,10 @@ void idleFunc(){
 				}
 				else
 				{
-          model2 = matrix;
-					
+					model2 = glm::mat4(1.0f);
+					model2[3].x = pos[0];
+					model2[3].y = pos[1];
+					model2[3].z = pos[2];
 				}
 
 			}

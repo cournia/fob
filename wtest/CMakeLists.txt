@@ -21,18 +21,18 @@ set(WTEST_LINK_LIBRARIES PUBLIC
 	${GLEW_LIBRARIES}
 )
 
-add_executable(WTEST ${WTEST_SOURCES} ${WTEST_SOURCES} )
+add_executable(wtest ${WTEST_SOURCES} ${WTEST_PUBLIC_HEADERS} )
 
 
-target_include_directories(WTEST PUBLIC
+target_include_directories(wtest PUBLIC
 	fob
 	${FREEIMAGE_INCLUDE_DIRS}
 	${ASSIMP_INCLUDE_DIR}
-  ${GLEW_INCLUDE_DIRS}
-  ${GLM_INCLUDE_DIR}
+	${GLEW_INCLUDE_DIRS}
+	${GLM_INCLUDE_DIR}
 	${PTHREAD_INCLUDE_DIR}
 )
-target_link_libraries(WTEST PUBLIC
+target_link_libraries(wtest PUBLIC
 	fob
 	${WTEST_LINK_LIBRARIES}
 

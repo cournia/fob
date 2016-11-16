@@ -15,10 +15,6 @@ set(TEST_SOURCES
 	fly2.cpp
 )
 
-find_package(GLUT REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(GLM REQUIRED)
-
 
 
 set(TEST_LINK_LIBRARIES PUBLIC
@@ -30,14 +26,14 @@ set(TEST_LINK_LIBRARIES PUBLIC
 
 include_directories(${PROJECT_SOURCE_DIR})
 
-add_executable(TEST ${TEST_SOURCES} ${TEST_PUBLIC_HEADERS} )
+add_executable(test ${TEST_SOURCES} ${TEST_PUBLIC_HEADERS} )
 
-target_link_libraries(TEST PUBLIC
-	FOB
-  ${TEST_LINK_LIBRARIES}
+target_link_libraries(test PUBLIC
+	fob
+	${TEST_LINK_LIBRARIES}
 )
 
-target_include_directories(TEST PUBLIC
+target_include_directories(test PUBLIC
 	${FOB_INCLUDE_DIR}
-  ${GLEW_INCLUDE_DIRS}
+	${GLEW_INCLUDE_DIRS}
 )

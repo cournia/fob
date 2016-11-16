@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 2.8 )
-project( fob )
+project( libfob )
 
 list( APPEND CMAKE_MODULE_PATH
   ${PROJECT_SOURCE_DIR}/CMake
@@ -26,18 +26,29 @@ set( FOB_DESCRIPTION "libfob is a C++ interface to Ascension Technology Corporat
 set( COMMON_PROJECT_DOMAIN https://github.com/cournia/fob )
 
 if (MSVC)
-  add_definitions(-DWIN32 -D_WIN32)
+	add_definitions(-DWIN32 -D_WIN32)
+	find_package(GLM REQUIRED)
+	find_package(Threads REQUIRED)
 endif()
 
 find_package(OpenGL REQUIRED)
-find_package(GLUT REQUIRED)
-find_package(FreeImage REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(GLM REQUIRED)
-find_package(Threads REQUIRED)
+
+add_definitions(-DINCLUDE_EXAMPLE)
+SET(INCLUDE_EXAMPLE TRUE CACHE BOOL "Setup the examples project")
+
+
 
 add_subdirectory( fob )
-add_subdirectory( test )
-add_subdirectory( wtest )
+
+if(INCLUDE_EXAMPLE)
+	if (WIN32)
+		find_package(FreeImage REQUIRED)
+		find_package(GLUT REQUIRED)
+		add_subdirectory( wtest )
+	else()
+		add_subdirectory( test )
+	endif(WIN32)
+endif(INCLUDE_EXAMPLE)
 
 
