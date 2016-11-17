@@ -6,20 +6,14 @@ if (WIN32)
 	set(FOB_HEADERS
 		wfob.h
 		rs232.h
-		mathematics.h
-		matrix.h
-		quaternion.h
-		vector.h
+
 	)
 
 
 	set(FOB_SOURCES
 		wfob.cpp
 		rs232.c
-		
-		matrix.cpp
-		quaternion.cpp
-		vector.cpp
+
 	)
 
 	set(FOB_LINK_LIBRARIES PUBLIC
