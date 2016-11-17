@@ -36,6 +36,8 @@ typedef float real_t;
 #include <cstdlib>
 #include <cmath>
 
+#define M_PI 3.14159265359f
+
 //#define MATH_EPSILON 1.19209290e-07f
 //! Precision error symbol.
 #define MATH_EPSILON 0.00001

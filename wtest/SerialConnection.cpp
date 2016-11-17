@@ -39,6 +39,7 @@ void resizeFunc(int width, int height);
 void idleFunc();
 void keyboardFunc(unsigned char key, int x, int y);
 void mouseFunc(int button, int state, int x, int y);
+void mouseMotFunc( int x, int y );
 
 //Funciones de inicialización y destrucción
 void initContext(int argc, char** argv);
@@ -289,6 +290,7 @@ void initContext(int argc, char** argv){
 	glutIdleFunc(idleFunc);
 	glutKeyboardFunc(keyboardFunc);
 	glutMouseFunc(mouseFunc);
+  glutMotionFunc( mouseMotFunc );
 
 
 
@@ -741,6 +743,50 @@ void idleFunc(){
 }
 void keyboardFunc(unsigned char key, int x, int y){}
 void mouseFunc(int button, int state, int x, int y){}
+int xAnt;
+int yAnt;
+void mouseMotFunc ( int x, int y )
+{
+  static float angleCamera = 0.0f;
+  glm::mat4 rotIX( 1.0 );
+  glm::mat4 rot1( 1.0 );
+  glm::mat4 rot2( 1.0 );
+  glm::mat4 rot3( 1.0 );
+
+  float rotX = ( x - xAnt ) / 300.0f;
+  if ( 0.2f < rotX )
+    rotX = 0.2f;
+  else if ( -0.2f > rotX )
+    rotX = -0.2f;
+
+  rot1 = glm::rotate( rot1, -angleCamera, glm::vec3( 1.0, 0.0, 0 ) );
+  rot2 = glm::rotate( rot2, rotX, glm::vec3( 0.0, 1.0, 0 ) );
+  rot3 = glm::rotate( rot3, angleCamera, glm::vec3( 1.0, 0.0, 0 ) );
+
+  view = rot3*rot2*rot1*view;
+  //IGlib::setViewMat( viewI );
+
+
+  float rotY = ( y - yAnt ) / 300.0f;
+  if ( 0.2f < rotY )
+    rotY = 0.2f;
+  else if ( -0.2f > rotY )
+    rotY = -0.2f;
+
+  if ( ( ( rotY > 0 ) && ( 1.3f > angleCamera ) ) || ( ( rotY < 0 ) && ( -1.3f < angleCamera ) ) )
+  {
+    rotIX = glm::rotate( rotIX, rotY, glm::vec3( 1.0, 0.0, 0 ) );
+    angleCamera = angleCamera + rotY;
+  }
+
+  view = rotIX* view;
+  
+
+  xAnt = x;
+  yAnt = y;
+
+}
+
 
 
 

@@ -36,7 +36,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "wfob.h"
 #include "rs232.h"
 
+#include "quaternion.h"
+#include "vector.h"
 
+#define GLM_FORCE_RADIANS
+
+#include "glm/gtx/euler_angles.hpp"
 #include "glm/gtx/string_cast.hpp"
 #define DEBUG(x) (std::cout<< x << std::endl)
 //#define DEBUG(x)
@@ -426,12 +431,13 @@ fob::bird::update_orientation( void )
 {
 	m_matrix = glm::mat4(1);
 
-	/*std::cout << glm::to_string(m_fob_angles) << std::endl;
+	std::cout << glm::to_string(m_fob_angles) << std::endl;
     //apply x and y rotation
     glm::quat tmp(1,glm::vec3(0));
-	m_quaternion = glm::rotate(glm::quat(1, glm::vec3(0)), glm::radians(m_fob_angles.x),
+    
+	m_quaternion = glm::rotate(glm::quat(1, glm::vec3(0)), m_fob_angles.x,
         glm::vec3(1,0,0) );
-	tmp = glm::rotate(glm::quat(1, glm::vec3(0)), glm::radians(m_fob_angles.y),
+	tmp = glm::rotate( glm::quat( 1, glm::vec3( 0 ) ), m_fob_angles.y,
         glm::vec3(0,1,0));
     m_quaternion =  tmp * m_quaternion;
 	m_quaternion = glm::normalize(m_quaternion);
@@ -444,25 +450,61 @@ fob::bird::update_orientation( void )
 	axis = glm::vec3(qtov.x, qtov.y, qtov.z);
 	axis = glm::normalize(axis);
 	tmp = glm::quat(1, glm::vec3(0));
-	tmp = glm::rotate(tmp,glm::radians(m_fob_angles.z),axis );
+	tmp = glm::rotate(tmp,m_fob_angles.z,axis );
     m_quaternion =  tmp * m_quaternion;
 	m_quaternion = glm::normalize(m_quaternion);
     
     //rotate by the correction rotation (for bad sensor installations)
     m_quaternion =  m_quaternion * m_rotation;
-	m_quaternion = glm::normalize(m_quaternion);*/
+	m_quaternion = glm::normalize(m_quaternion);
 
-	//m_quaternion = glm::normalize(glm::quat(m_fob_angles));
+	
 
     //FIXME m_angles should contain the angles with m_rotation
     //      applied 
     m_angles = m_fob_angles;
 	
     //update matrix
-	m_matrix = glm::mat4_cast(m_quaternion);
-    //.get_rotation_matrix(  );
+	  m_matrix = glm::mat4_cast(m_quaternion)* m_matrix;
+    
     m_matrix[3]= glm::vec4(m_position,1);
 
+
+ /* math::quaternion m_quaternionf;
+  math::quaternion tmp;
+  m_quaternionf.from_angle_axis( math::to_radians( m_fob_angles.x ),
+                                math::vector3::X_AXIS );
+  tmp.from_angle_axis( math::to_radians( m_fob_angles.y ),
+                       math::vector3::Y_AXIS );
+  m_quaternionf = tmp * m_quaternionf;
+  m_quaternionf.normalize( );
+
+  //the rotation needs to be applied to the new reference frame
+  //not the global one
+  math::vector3 axis;
+  tmp.set( math::vector3::Z_AXIS, 0.0 );
+  axis = ( m_quaternionf * tmp * !m_quaternionf ).vec( );
+  axis.normalize( );
+  tmp.from_angle_axis( math::to_radians( m_fob_angles.z ),
+                       axis );
+  m_quaternionf = tmp * m_quaternionf;
+  m_quaternionf.normalize( );
+
+  //rotate by the correction rotation (for bad sensor installations)
+  //m_quaternionf = m_quaternionf * m_rotation;
+  m_quaternionf.normalize( );
+
+  //FIXME m_angles should contain the angles with m_rotation
+  //      applied 
+  m_angles = m_fob_angles;
+
+  //update matrix
+  math::matrix4 m_matrix2  = m_quaternionf.get_rotation_matrix();
+  m_matrix2.set_translation( math::vector3(m_position.x,m_position.y,m_position.z) );
+
+  m_matrix = glm::mat4( *( ( const real_t * ) m_matrix2 ) );*/
+  //m_matrix = glm::transpose( m_matrix );
+  std::cout << glm::to_string( m_matrix ) << std::endl;
     //orientation is new
     m_ori_dirty = false;
 }
