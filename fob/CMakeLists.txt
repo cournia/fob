@@ -17,7 +17,7 @@ if (WIN32)
 	)
 
 	set(FOB_LINK_LIBRARIES PUBLIC
-		${GLUT_LIBRARY}
+		
 		${PTHREAD_LIBRARY}
 	)
 	
