@@ -45,7 +45,7 @@ It's important to note that this "command wait time" only affects
 the amount of time it takes to start up the flock.  It does not affect
 the operation of the flock once the "fly( )" has been called.
 
-#CMAKE Installation
+###CMAKE Installation
 
 To install/build the library, you can use the cmake as usual as other projects.
 If it's prepared to detect MSVC or others because libfob works differently 
